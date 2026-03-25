@@ -172,13 +172,18 @@ git push
 
 ## 11. Configure GitHub Pages
 
-In the repo settings (`Settings → Pages`):
+Enable Pages with the **GitHub Actions** workflow (once per repo). Example:
 
-- **Source:** GitHub Actions
-- **Custom domain:** `lab.photomancer.art`
-- **Enforce HTTPS:** ✓
+```bash
+gh api -X POST repos/Yona-Appletree/photomancer-lab/pages -f build_type=workflow
+```
 
-GitHub will verify the domain and issue a TLS cert automatically.
+Then in `Settings → Pages` (after DNS for the custom domain is working, if needed):
+
+- **Custom domain:** `lab.photomancer.art` (optional until DNS is set)
+- **Enforce HTTPS:** ✓ when the certificate is available
+
+GitHub will verify the domain and issue a TLS cert after the CNAME record points at `yona-appletree.github.io`.
 
 ## 12. Configure GoDaddy DNS
 
