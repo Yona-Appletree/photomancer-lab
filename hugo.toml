@@ -1,0 +1,35 @@
+baseURL = "https://lab.photomancer.art/"
+title = "Photomancer's Lab"
+languageCode = "en"
+DefaultContentLanguage = "en"
+enableInlineShortcodes = true
+footnoteReturnLinkContents = "^"
+theme = "hugotex"
+
+[pagination]
+  pagerSize = 10
+
+[Params.author]
+  name = "Yona Appletree"
+  abstract = """
+  Notes on software, light, and systems — engineering, photography, and hardware.
+  """
+
+[taxonomies]
+  tag = "tags"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+    [markup.goldmark.extensions]
+      [markup.goldmark.extensions.passthrough]
+        enable = true
+        [markup.goldmark.extensions.passthrough.delimiters]
+          block = [["$$", "$$"]]
+          inline = [["$", "$"]]
+  [markup.highlight]
+    style = "paraiso-dark"
+
+[Params]
+  darkmode = true
