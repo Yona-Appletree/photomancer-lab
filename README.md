@@ -1,4 +1,4 @@
-# Photomancer's Lab
+# Photomancer Lab
 
 Personal site and blog: [lab.photomancer.art](https://lab.photomancer.art/).
 

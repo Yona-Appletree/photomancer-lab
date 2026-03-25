@@ -1,4 +1,4 @@
-# Blog Setup Design — Photomancer's Lab
+# Blog Setup Design — Photomancer Lab
 
 ## Scope
 

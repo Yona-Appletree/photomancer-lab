@@ -1,5 +1,5 @@
 baseURL = "https://lab.photomancer.art/"
-title = "Photomancer's Lab"
+title = "Photomancer Lab"
 languageCode = "en"
 DefaultContentLanguage = "en"
 enableInlineShortcodes = true

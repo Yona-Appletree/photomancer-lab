@@ -1,4 +1,4 @@
-# Blog Setup Plan — Photomancer's Lab
+# Blog Setup Plan — Photomancer Lab
 
 ## Scope of Work
 

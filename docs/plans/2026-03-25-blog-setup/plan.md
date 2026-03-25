@@ -1,4 +1,4 @@
-# Plan: Blog Setup — Photomancer's Lab
+# Plan: Blog Setup — Photomancer Lab
 
 ## 1. Install Hugo
 
@@ -28,7 +28,7 @@ git submodule add https://github.com/kaisugi/HugoTeX.git themes/hugotex
 ```toml
 baseURL = "https://lab.photomancer.art/"
 languageCode = "en-us"
-title = "Photomancer's Lab"
+title = "Photomancer Lab"
 theme = "hugotex"
 
 [params]
@@ -86,7 +86,7 @@ tags: []
 draft: false
 ---
 
-Welcome to Photomancer's Lab.
+Welcome to Photomancer Lab.
 ```
 
 ## 8. Verify local preview
@@ -189,9 +189,9 @@ GitHub will verify the domain and issue a TLS cert after the CNAME record points
 
 In GoDaddy DNS settings for `photomancer.art`, add:
 
-| Type  | Name | Value                        | TTL    |
-|-------|------|------------------------------|--------|
-| CNAME | lab  | yona-appletree.github.io     | 1 hour |
+| Type  | Name | Value                    | TTL    |
+| ----- | ---- | ------------------------ | ------ |
+| CNAME | lab  | yona-appletree.github.io | 1 hour |
 
 GitHub Pages will handle the rest. DNS propagation may take up to an hour.
 
