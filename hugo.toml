@@ -37,4 +37,5 @@ ignoreFiles = ["\\.post\\.ts$", "\\.gen\\.test\\.ts$"]
   darkmode = true
   description = "Notes by Yona Appletree on TypeScript, software architecture, systems, photography, and hardware."
   opengraph = true
+  sourceURL = "https://github.com/Yona-Appletree/photomancer-lab"
   twittercard = true
