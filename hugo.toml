@@ -5,6 +5,7 @@ DefaultContentLanguage = "en"
 enableInlineShortcodes = true
 footnoteReturnLinkContents = "^"
 theme = "hugotex"
+ignoreFiles = ["\\.post\\.ts$", "\\.gen\\.test\\.ts$"]
 
 [pagination]
   pagerSize = 10

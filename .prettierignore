@@ -1,8 +1,6 @@
 public/
 resources/
+themes/
 node_modules/
-.turbo/
 content/post/*.gen.test.ts
-content/post/*.gen.md
-.hugo_build.lock
-.DS_Store
+*.toml
