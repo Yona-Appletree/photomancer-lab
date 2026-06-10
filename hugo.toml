@@ -3,6 +3,7 @@ title = "Photomancer Lab"
 languageCode = "en"
 DefaultContentLanguage = "en"
 enableInlineShortcodes = true
+enableRobotsTXT = true
 footnoteReturnLinkContents = "^"
 theme = "hugotex"
 ignoreFiles = ["\\.post\\.ts$", "\\.gen\\.test\\.ts$"]
@@ -34,3 +35,6 @@ ignoreFiles = ["\\.post\\.ts$", "\\.gen\\.test\\.ts$"]
 
 [Params]
   darkmode = true
+  description = "Notes by Yona Appletree on TypeScript, software architecture, systems, photography, and hardware."
+  opengraph = true
+  twittercard = true

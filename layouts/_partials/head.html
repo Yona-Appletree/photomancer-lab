@@ -1,0 +1,32 @@
+<head>
+<meta charset="utf-8" />
+{{ if .Title }}
+  <title>{{ .Title }} - {{ .Site.Title }}</title>
+{{ else }}
+  <title>{{ .Site.Title }}</title>
+{{ end }}
+{{- $description := .Description | default .Site.Params.description -}}
+{{ with $description }}
+  <meta name="description" content="{{ . }}" />
+{{ end }}
+<link rel="canonical" href="{{ .Permalink }}" />
+{{- with .Site.Params.Author.Name }}
+  <meta name="author" content="{{ . }}"/>
+{{- end }}
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+{{ if site.Params.twittercard }}
+{{ template "_internal/twitter_cards.html" . }}
+{{- end }}
+{{ if site.Params.opengraph }}
+{{ template "_internal/opengraph.html" . }}
+{{- end }}
+{{ range .AlternativeOutputFormats -}}
+    {{ printf `<link rel="%s" type="%s" href="%s" title="%s" />` .Rel .MediaType.Type .Permalink $.Site.Title | safeHTML }}
+{{ end -}}
+<link rel="stylesheet" href="{{ "css/latex.css" | relURL }}" />
+<link rel="stylesheet" href="{{ "css/main.css" | relURL }}" />
+{{ if .Page.Store.Get "hasMath" }}
+<link rel="stylesheet" href="{{ "css/katex.min.css" | relURL }}" />
+{{ end }}
+</head>

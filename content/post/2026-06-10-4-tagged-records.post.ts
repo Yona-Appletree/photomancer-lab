@@ -10,14 +10,14 @@ post({
 });
 
 md`
-There is often a need in TypeScript programs to have a source-defined set of rich values that
-are identified by some tag/id/key. I call this pattern a "tagged catalog." 
+There is often a need in TypeScript programs to have a source-defined set of rich values that are
+identified by some tag/id/key. I call this pattern a "tagged catalog."
 
 Recently I was looking over the code of a small game that a friend is writing to learn TypeScript.
 One piece of it was exactly this kind of catalog.
 
-I'll show the original code in a moment, but lets start with a clean example, showing how I'd 
-_like_ this to work:
+I'll show the original code in a moment, but lets start with a clean example, showing how I'd _like_
+this to work:
 `;
 
 export const EnemyIntent = TaggedCatalog<EnemyIntentDef>()({
