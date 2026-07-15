@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contiguous popup — union playground</title>
+<style>
+  :root {
+    --bg: #141519;
+    --panel: #1e2026;
+    --border: #40455a;
+    --text: #e6e8ef;
+    --muted: #9aa0b0;
+    --accent: #8b95ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sandbox {
+    position: relative;
+    flex: 1;
+    min-height: 280px;
+    border: 1px solid #2a2d38;
+    border-radius: 12px;
+    background: #17181d;
+    overflow: hidden;
+    touch-action: none;
+  }
+  .outline-svg {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: visible;
+  }
+  path.group-outline {
+    fill: url(#gradPanel);
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+  .drag {
+    position: absolute;
+    z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 12px;
+    cursor: grab; user-select: none;
+  }
+  .drag:active { cursor: grabbing; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 8px 18px;
+    align-items: center;
+    padding: 8px 2px 2px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .controls label { display: flex; align-items: center; gap: 6px; }
+  .controls input[type=range] { width: 110px; accent-color: var(--accent); }
+  .controls .val { min-width: 24px; color: var(--text); font-variant-numeric: tabular-nums; }
+  kbd {
+    background: #2a2e3a; border-radius: 4px; padding: 0 5px;
+    font: 11px ui-monospace, monospace; color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gradPanel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#282c38"/>
+      <stop offset="1" stop-color="#191b22"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="sandbox" id="sandbox">
+  <svg class="outline-svg" id="sandSvg"></svg>
+</div>
+
+<div class="controls">
+  <label>radius <input type="range" id="radiusSl" min="0" max="24" value="10"><span class="val" id="radiusVal">10</span></label>
+  <span>drag to move · <kbd>shift</kbd>-drag to resize</span>
+</div>
+
+<script>
+'use strict';
+
+/* ================================================================
+ * PORTABLE CORE — pure geometry, no DOM.
+ * rects in, SVG path string out.
+ * ================================================================ */
+
+const EPS = 1e-4;
+// Coords closer than this are welded together, so nearly-aligned edges
+// (sub-1.5px steps from layout rounding) don't render as hairline jogs.
+const COORD_TOL = 1.25;
+
+function dedupeSorted(arr, tol) {
+  const out = [];
+  for (const v of arr) {
+    if (!out.length || v - out[out.length - 1] > tol) out.push(v);
+  }
+  return out;
+}
+
+function unionLoops(rects) {
+  rects = rects.filter(r => r.w > EPS && r.h > EPS);
+  if (!rects.length) return [];
+
+  const xs = dedupeSorted(rects.flatMap(r => [r.x, r.x + r.w]).sort((a, b) => a - b), COORD_TOL);
+  const ys = dedupeSorted(rects.flatMap(r => [r.y, r.y + r.h]).sort((a, b) => a - b), COORD_TOL);
+  const nx = xs.length - 1, ny = ys.length - 1;
+
+  const cov = [];
+  for (let i = 0; i < nx; i++) {
+    cov.push([]);
+    const cx = (xs[i] + xs[i + 1]) / 2;
+    for (let j = 0; j < ny; j++) {
+      const cy = (ys[j] + ys[j + 1]) / 2;
+      cov[i].push(rects.some(r => cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h));
+    }
+  }
+  const C = (i, j) => (i >= 0 && i < nx && j >= 0 && j < ny) ? cov[i][j] : false;
+
+  const segs = [];
+  for (let i = 0; i <= nx; i++)
+    for (let j = 0; j < ny; j++)
+      if (C(i - 1, j) !== C(i, j)) segs.push([[xs[i], ys[j]], [xs[i], ys[j + 1]]]);
+  for (let j = 0; j <= ny; j++)
+    for (let i = 0; i < nx; i++)
+      if (C(i, j - 1) !== C(i, j)) segs.push([[xs[i], ys[j]], [xs[i + 1], ys[j]]]);
+
+  const key = p => p[0].toFixed(2) + ',' + p[1].toFixed(2);
+  const adj = new Map();
+  segs.forEach((s, idx) => {
+    for (const p of [s[0], s[1]]) {
+      const k = key(p);
+      if (!adj.has(k)) adj.set(k, []);
+      adj.get(k).push(idx);
+    }
+  });
+
+  const used = new Array(segs.length).fill(false);
+  const loops = [];
+  for (let s0 = 0; s0 < segs.length; s0++) {
+    if (used[s0]) continue;
+    used[s0] = true;
+    const loop = [segs[s0][0], segs[s0][1]];
+    for (;;) {
+      const cur = loop[loop.length - 1];
+      const prev = loop[loop.length - 2];
+      const k = key(cur);
+      const cands = (adj.get(k) || []).filter(i => !used[i]);
+      if (!cands.length) break;
+      let pick = cands[0];
+      if (cands.length > 1) {
+        const din = [cur[0] - prev[0], cur[1] - prev[1]];
+        const turning = cands.find(i => {
+          const s = segs[i];
+          const other = key(s[0]) === k ? s[1] : s[0];
+          const dout = [other[0] - cur[0], other[1] - cur[1]];
+          return Math.abs(din[0] * dout[1] - din[1] * dout[0]) > EPS;
+        });
+        if (turning !== undefined) pick = turning;
+      }
+      used[pick] = true;
+      const s = segs[pick];
+      const next = key(s[0]) === k ? s[1] : s[0];
+      if (key(next) === key(loop[0])) break;
+      loop.push(next);
+    }
+    const simp = [];
+    const n = loop.length;
+    for (let i = 0; i < n; i++) {
+      const a = loop[(i - 1 + n) % n], b = loop[i], c = loop[(i + 1) % n];
+      const cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+      if (Math.abs(cross) > EPS) simp.push(b);
+    }
+    if (simp.length >= 3) loops.push(simp);
+  }
+  return loops;
+}
+
+function roundedPath(loops, radius) {
+  const f = v => Math.round(v * 100) / 100;
+  let d = '';
+  for (const pts of loops) {
+    const n = pts.length;
+    const rad = [];
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], a = pts[(i - 1 + n) % n], c = pts[(i + 1) % n];
+      const lp = Math.hypot(p[0] - a[0], p[1] - a[1]);
+      const ln = Math.hypot(c[0] - p[0], c[1] - p[1]);
+      rad.push(Math.max(0, Math.min(radius, lp / 2, ln / 2)));
+    }
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], a = pts[(i - 1 + n) % n], c = pts[(i + 1) % n];
+      const lin = Math.hypot(p[0] - a[0], p[1] - a[1]);
+      const lout = Math.hypot(c[0] - p[0], c[1] - p[1]);
+      const din = [(p[0] - a[0]) / lin, (p[1] - a[1]) / lin];
+      const dout = [(c[0] - p[0]) / lout, (c[1] - p[1]) / lout];
+      const r = rad[i];
+      const p1 = [p[0] - din[0] * r, p[1] - din[1] * r];
+      const p2 = [p[0] + dout[0] * r, p[1] + dout[1] * r];
+      const sweep = (din[0] * dout[1] - din[1] * dout[0]) > 0 ? 1 : 0;
+      d += (i === 0 ? 'M' : 'L') + f(p1[0]) + ' ' + f(p1[1]);
+      if (r > 0.05) d += 'A' + f(r) + ' ' + f(r) + ' 0 0 ' + sweep + ' ' + f(p2[0]) + ' ' + f(p2[1]);
+    }
+    d += 'Z';
+  }
+  return d;
+}
+
+const DPR = window.devicePixelRatio || 1;
+const snap = v => Math.round(v * DPR) / DPR + (DPR === 1 ? 0.5 : 0);
+const snapRect = r => {
+  const x = snap(r.x), y = snap(r.y);
+  return { x, y, w: snap(r.x + r.w) - x, h: snap(r.y + r.h) - y };
+};
+
+function mergedOutline(rects, radius) {
+  return roundedPath(unionLoops(rects.map(snapRect)), radius);
+}
+
+/* ================================================================
+ * Playground glue
+ * ================================================================ */
+
+const sandbox = document.getElementById('sandbox');
+const sandSvg = document.getElementById('sandSvg');
+const radiusSl = document.getElementById('radiusSl');
+const sandPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+sandPath.setAttribute('class', 'group-outline');
+sandPath.setAttribute('fill-rule', 'evenodd');
+sandPath.style.filter = 'drop-shadow(0 4px 16px rgba(0,0,0,0.3))';
+sandSvg.appendChild(sandPath);
+
+const sandRects = [
+  { x: 50,  y: 36,  w: 170, h: 56,  label: 'A' },
+  { x: 125, y: 91,  w: 280, h: 130, label: 'B' },
+  { x: 340, y: 54,  w: 115, h: 166, label: 'C' },
+];
+const dragEls = sandRects.map(r => {
+  const el = document.createElement('div');
+  el.className = 'drag';
+  el.textContent = r.label + ' — drag me';
+  sandbox.appendChild(el);
+  return el;
+});
+
+function renderSandbox() {
+  sandSvg.setAttribute('width', sandbox.clientWidth);
+  sandSvg.setAttribute('height', sandbox.clientHeight);
+  sandPath.setAttribute('d', mergedOutline(sandRects, +radiusSl.value));
+  sandRects.forEach((r, i) => {
+    const el = dragEls[i];
+    el.style.left = r.x + 'px';
+    el.style.top = r.y + 'px';
+    el.style.width = r.w + 'px';
+    el.style.height = r.h + 'px';
+  });
+}
+radiusSl.addEventListener('input', () => {
+  document.getElementById('radiusVal').textContent = radiusSl.value;
+  renderSandbox();
+});
+
+dragEls.forEach((el, i) => {
+  el.addEventListener('pointerdown', e => {
+    el.setPointerCapture(e.pointerId);
+    const r0 = { ...sandRects[i] };
+    const sx = e.clientX, sy = e.clientY;
+    const resize = e.shiftKey;
+    const move = ev => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (resize) {
+        sandRects[i].w = Math.max(40, r0.w + dx);
+        sandRects[i].h = Math.max(30, r0.h + dy);
+      } else {
+        sandRects[i].x = r0.x + dx;
+        sandRects[i].y = r0.y + dy;
+      }
+      renderSandbox();
+    };
+    const up = () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+  });
+});
+
+new ResizeObserver(() => renderSandbox()).observe(document.body);
+renderSandbox();
+</script>
+</body>
+</html>
