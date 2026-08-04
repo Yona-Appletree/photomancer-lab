@@ -1,25 +1,51 @@
 import { md, post, ts } from "../../src/ts-post";
 
 post({
-  title: "A Provider Is Just a Function",
+  title: "Each Test Declares Its World",
   date: "2026-08-04",
   description:
-    "Dependency injection for TypeScript apps without decorators, containers, or frameworks — providers are plain functions composed with plain types.",
+    "Tests that declare their entire world inline — type-checked, no mocking, no shared fixtures — powered by twenty lines of plain TypeScript instead of a DI framework.",
   tested: true,
   tags: ["architecture", "typescript"],
 });
 
 md`
-This post is for the TypeScript engineer who has an app — often a Next.js app — with no dependency
-injection, and a growing sense that tests are harder than they should be.
+Here is a test from a TypeScript app. Before reading on, notice what it does not need.
+`;
 
-The usual advice at that point is to adopt a DI framework: decorators, containers, tokens, module
-scanning. I think that advice skips the interesting part. Modern TypeScript can express type-safe
-dependency wiring with nothing but functions and object types. I have been running this pattern in a
-production monorepo for a while now, and the extracted core lives in
-[ts-provide](https://github.com/PhotomancerArt/ts-provide).
+test(
+  "greets a known user and records the log",
+  Providers(
+    provideConfig,
+    provideRecordingLogger,
+    provideUsers([["u7", "Radia"]]),
+    provideGreetingService,
+  ),
+  (ctx) => {
+    expect(ctx.greetings.greet("u7")).toBe("Hello, Radia!");
+    expect(ctx.messages).toEqual(["greeted Radia"]);
+  },
+);
 
-## The starting point
+md`
+There is no \`vi.mock\` and no module interception. There is no \`beforeEach\`, no shared fixture
+state, no container, no decorators. The test's second argument declares its entire world — real
+greeting service, a recording logger, a user store with exactly one user — and the body receives
+that world, fully typed. A different world is a different chain. If the world is missing something
+the service needs, the test does not fail at runtime; it fails to compile.
+
+That test is not pseudocode. Like every example in this post, it compiled and ran before this page
+was built.
+
+This post is for the TypeScript engineer — often with a Next.js app — who has no dependency
+injection and a growing sense that tests are harder than they should be. The usual advice at that
+point is to adopt a DI framework: decorators, containers, tokens, module scanning. The price here is
+different: about twenty lines of plain TypeScript, shown in full by the end. I have been running
+this pattern in a production monorepo for a while now, and the extracted core lives in
+[ts-provide](https://github.com/PhotomancerArt/ts-provide). By the end of the post you will be able
+to read — and own — every line behind the opening example.
+
+## Why you can't write this test today
 
 Most apps without DI share a shape. Each piece of infrastructure is a module-level singleton, and
 everything imports it directly:
@@ -50,12 +76,8 @@ This is fine right up until it isn't:
 4. There is no seam for running two configurations in the same process: one test with a fake clock
    and one without, two tenants, a preview environment.
 
-What I want instead is:
-
-- Type-safe dependency wiring.
-- Tests that swap dependencies without module interception.
-- Explicit composition, visible in ordinary code.
-- No decorators, scanning, reflection, codegen, or framework-owned container.
+The opening test needs the opposite of all four: construction on demand, config as a value, fakes
+swapped in by ordinary code, and as many independent worlds per process as there are tests.
 
 ## The core idea
 
@@ -66,19 +88,23 @@ interface Logger {
   info(message: string): void;
 }
 
-const provideConfig = () => ({
-  config: {
-    appName: "shipping-dashboard",
-    greetingPrefix: "Hello",
-  },
-});
+function provideConfig() {
+  return {
+    config: {
+      appName: "shipping-dashboard",
+      greetingPrefix: "Hello",
+    },
+  };
+}
 type ConfigCtx = ReturnType<typeof provideConfig>;
 
-const provideLogger = ({ config }: ConfigCtx): { logger: Logger } => ({
-  logger: {
-    info: (message) => console.log(`[${config.appName}] ${message}`),
-  },
-});
+function provideLogger({ config }: ConfigCtx): { logger: Logger } {
+  return {
+    logger: {
+      info: (message) => console.log(`[${config.appName}] ${message}`),
+    },
+  };
+}
 type LoggerCtx = ReturnType<typeof provideLogger>;
 
 md`
@@ -103,19 +129,19 @@ test("manual composition is just object spread", () => {
 md`
 ## Composing chains
 
-Spreading by hand gets repetitive, so the first piece of machinery I allow myself is a \`Providers\`
-helper that folds a list of providers into a single context-building function. The full
-implementation is at the end of the post; it is about twenty lines of runtime code.
+Spreading by hand gets repetitive, so the first piece of machinery is a \`Providers\` helper that
+folds a list of providers into a single context-building function. The full implementation is at the
+end of the post; it is about twenty lines of runtime code.
 
-First, two more providers to make the example honest — a user store and a service that depends on
-three earlier pieces of context:
+Two more providers make the example honest — a user store and the greeting service from the opening
+test, which depends on three earlier pieces of context:
 `;
 
 interface UserStore {
   findName(id: string): string | undefined;
 }
 
-const provideUserStore = (): { users: UserStore } => {
+function provideUserStore(): { users: UserStore } {
   const names = new Map([
     ["u1", "Ada"],
     ["u2", "Grace"],
@@ -126,22 +152,20 @@ const provideUserStore = (): { users: UserStore } => {
       findName: (id) => names.get(id),
     },
   };
-};
+}
 type UserStoreCtx = ReturnType<typeof provideUserStore>;
 
-const provideGreetingService = ({
-  config,
-  users,
-  logger,
-}: ConfigCtx & UserStoreCtx & LoggerCtx) => ({
-  greetings: {
-    greet(userId: string): string {
-      const name = users.findName(userId) ?? "stranger";
-      logger.info(`greeted ${name}`);
-      return `${config.greetingPrefix}, ${name}!`;
+function provideGreetingService({ config, users, logger }: ConfigCtx & UserStoreCtx & LoggerCtx) {
+  return {
+    greetings: {
+      greet(userId: string): string {
+        const name = users.findName(userId) ?? "stranger";
+        logger.info(`greeted ${name}`);
+        return `${config.greetingPrefix}, ${name}!`;
+      },
     },
-  },
-});
+  };
+}
 
 md`
 The application context is the chain of all four:
@@ -176,9 +200,9 @@ test("provider chains compose", () => {
 md`
 ## What the types enforce
 
-The interesting property is that the wiring is checked. Each provider can only depend on keys
-produced earlier in the chain, and TypeScript enforces the order. These are the mistakes the pattern
-is meant to catch, written as expected type failures in this post's checked source:
+The wiring is checked. Each provider can only depend on keys produced earlier in the chain, and
+TypeScript enforces the order. These are the mistakes the pattern is meant to catch, written as
+expected type failures in this post's checked source:
 `;
 
 // @ts-expect-error A provider cannot run before its dependencies exist.
@@ -194,46 +218,42 @@ md`
 There is no container to misconfigure and no token to forget to register. A wiring mistake is a
 compile error at the call site, pointing at the provider that is missing its inputs.
 
-## Tests swap providers, not modules
+## Assembling the opening test
 
-This is the part that sold me, so I want to push on it.
+Everything needed to reconstruct the test at the top of this post is now in reach. Three pieces
+remain: two fakes and the \`test()\` function itself.
 
-A test wants a world: real implementations for the thing under test, fakes for everything noisy
-around it. With module singletons, building that world means intercepting imports and living with
-\`vi.mock\`'s hoisting rules. With providers, the world is a value. Swapping an implementation is
-replacing one link in a chain.
-
-Fakes are providers too, and they can hand their inspection handles back through the context. A
-recording logger returns the logger _and_ the list it records into:
+Fakes are providers too, and they can hand their inspection handles back through the context. The
+recording logger from the opening example returns the logger _and_ the list it records into:
 `;
 
-const provideRecordingLogger = (): { logger: Logger; messages: string[] } => {
+function provideRecordingLogger(): { logger: Logger; messages: string[] } {
   const messages: string[] = [];
 
   return {
     logger: { info: (message) => void messages.push(message) },
     messages,
   };
-};
+}
 
 md`
 And because providers are plain functions, a parameterized fake is a function that returns a
 provider:
 `;
 
-const provideUsers = (entries: Array<[id: string, name: string]>) => {
+function provideUsers(entries: Array<[id: string, name: string]>) {
   const names = new Map(entries);
 
   return (): { users: UserStore } => ({
     users: { findName: (id) => names.get(id) },
   });
-};
+}
 
 md`
 ### A \`test()\` that takes a world
 
-Here is where it gets fun. Vitest's \`test\` takes a name and a function. Ours also accepts a
-provider between them — it builds the context and hands it to the test body:
+Vitest's \`test\` takes a name and a function. Ours also accepts a provider between them — it builds
+the context and hands it to the test body:
 `;
 
 import { test as vitestTest } from "vitest";
@@ -263,27 +283,12 @@ export function test(
 
 md`
 The two-argument form passes through untouched, so this is a drop-in replacement for the framework's
-\`test\` — every test in this post actually runs through it. The three-argument form is where the
-pattern pays off: each test declares its world inline, and the world is type-checked.
-`;
+\`test\` — every test in this post, including the plain ones above, runs through it.
 
-test(
-  "each test declares its world",
-  Providers(
-    provideConfig,
-    provideRecordingLogger,
-    provideUsers([["u7", "Radia"]]),
-    provideGreetingService,
-  ),
-  (ctx) => {
-    expect(ctx.greetings.greet("u7")).toBe("Hello, Radia!");
-    expect(ctx.messages).toEqual(["greeted Radia"]);
-  },
-);
-
-md`
-Swapping an implementation is editing the world, not reaching into module internals. And shared
-setup is not a \`beforeEach\` mutating outer variables — it is a base chain that tests extend:
+That is the whole apparatus. Scroll back to the opening example: the chain, the fakes, the typed
+context — every line of it is now code you have read. Swapping an implementation is editing the
+world, not reaching into module internals. And shared setup is not a \`beforeEach\` mutating outer
+variables — it is a base chain that tests extend:
 `;
 
 const quietWorld = Providers(provideConfig, provideRecordingLogger);
@@ -442,5 +447,5 @@ Add overloads as your chains grow, or generate them; the production version supp
 providers, wrappers, and disposal with the same shape.
 
 Dependency injection is a good idea that got buried under frameworks. In TypeScript, the good idea
-is available on its own: a provider is just a function.
+is available on its own — a provider is just a function, and each test declares its world.
 `;
