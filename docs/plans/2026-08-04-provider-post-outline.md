@@ -1,6 +1,6 @@
 # Outline: the provider-system post
 
-Working artifact for the structure of `content/post/2026-08-04-provider-system.post.ts`.
+Working artifact for the structure of `content/post/2026-08-04-providers.post.ts`.
 This describes the *architecture* of the piece; prose changes happen in the post itself.
 
 ## The story
@@ -82,7 +82,10 @@ to become `function provideConfig() {...}` style). Two options:
 
 ## Decisions (2026-08-04)
 
-1. Title: **"Each Test Declares Its World"** (payoff-first). "A provider is just a function"
-   stays as the closing kicker; file renamed so the URL slug matches.
+1. Title: **"Providers: Dependency Injection for Test-Driven TypeScript"** (revised after first
+   publish; names the mechanism up front while the description and lede keep the payoff).
+   "Each test declares its world" remains the ring line inside the post, and "a provider is just
+   a function" stays as the closing kicker. Slug is `2026-08-04-providers` with a Hugo alias
+   redirecting the briefly-published `each-test-declares-its-world` URL.
 2. Cold open: **compiled via hoisted `function` declarations** — the lede test is real and runs.
 3. Domain pre-explanation before the cold open: none; trust the reader.

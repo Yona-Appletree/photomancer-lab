@@ -4,6 +4,8 @@ export type PostFrontMatter = {
   description?: string;
   tested?: boolean;
   tags?: string[];
+  /** Prior URLs for this post; Hugo emits redirects for each. */
+  aliases?: string[];
 };
 
 export function md(
