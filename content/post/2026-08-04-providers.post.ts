@@ -323,35 +323,142 @@ database backend, each pass building the chain with a different database provide
 that works on every supported backend is a loop over worlds, not a copied file. Scoped fakes — fake
 timers, transactions rolled back after each test — become wrappers, which are covered below.
 
-## Where it grows
+## Ambient context: one process, many worlds
 
-The twenty-line helper below is deliberately minimal: synchronous providers, explicit context
-passing. The production version of this pattern, extracted as
-[ts-provide](https://github.com/PhotomancerArt/ts-provide), adds the pieces a real app ends up
-wanting:
+Every example so far passes context explicitly: the chain hands \`ctx\` to the test body, and each
+service receives its dependencies as parameters. At module scale that honesty is the point. At
+call-stack scale it is invasive — the one ergonomic thing module singletons had going for them was
+that any function, however deep, could import the database. If adopting providers meant threading
+\`ctx\` through every signature between a route handler and the query that needs it, most codebases
+would refuse, and they would be right to.
 
-**Async providers and ambient context.** Providers can be async, and \`runWithProvider\` runs a
-function inside a context scope backed by \`AsyncLocalStorage\`, so deep call stacks can reach the
-current context without threading a parameter through every layer:
+Node has a primitive for exactly this: \`AsyncLocalStorage\`, a value that follows the _asynchronous
+execution graph_ instead of living in a module global. Enter a scope with a value, and any code
+called from that scope — through however many layers, across \`await\` — can read it. Here is the
+entire mechanism, a dozen more lines you own:
+`;
+
+import { AsyncLocalStorage } from "node:async_hooks";
+
+const contextStore = new AsyncLocalStorage<object>();
+
+export function runWith<R>(provider: AnyProvider, fn: () => R): R {
+  return contextStore.run(provider(), fn);
+}
+
+export function currentCtx<T extends object>(): T {
+  const ctx = contextStore.getStore();
+  if (ctx === undefined) {
+    throw new Error("currentCtx() called outside of runWith()");
+  }
+  return ctx as T;
+}
+
+md`
+\`runWith\` builds a chain's context and stashes it for the duration of \`fn\`; \`currentCtx\` reads
+whatever scope the caller happens to be running inside. For the Next.js reader this completes the
+React analogy: \`runWith\` is the provider component, \`currentCtx\` is \`useContext\`, and the
+async execution graph plays the role of the component tree.
+
+A function deep in the stack can now reach its services without a parameter. The default-parameter
+idiom keeps it honest — ambient by default, but any caller may still inject a context explicitly:
+`;
+
+function greetingReport(userId: string, ctx: AppContext = currentCtx<AppContext>()): string {
+  return `[${ctx.config.appName}] ${ctx.greetings.greet(userId)}`;
+}
+
+test("ambient by default, explicit when injected", () => {
+  runWith(appProvider, () => {
+    expect(greetingReport("u1")).toBe("[shipping-dashboard] Hello, Ada!");
+  });
+
+  expect(greetingReport("u2", appProvider())).toBe("[shipping-dashboard] Hello, Grace!");
+});
+
+md`
+This is how the pattern escapes tests and runs an application. The production system behind this
+post builds its app chain once per process; request middleware then _extends_ the ambient context
+per request — parsing the session cookie into a verified claim, binding a request-scoped logger —
+and runs the handler inside the extended scope. A sketch of the real middleware:
 `;
 
 ts`
-await runWithProvider(
-  appProvider,
-  async () => {
-    await handleRequest();
-  },
-  undefined,
-);
+// hooks.server.ts — the app chain ran once at boot; each request extends it
+export async function handle({ event, resolve }) {
+  const authorization = await parseSessionCookie(event.cookies);
 
-function handleRequest(ctx: AppContext = providerCtx<AppContext>()) {
-  ctx.logger.info("handling request");
+  return runWith(
+    () => ({
+      ...appCtx,
+      authorization,
+      logger: appCtx.logger.child({ requestId: authorization.requestId }),
+    }),
+    () => resolve(event),
+  );
+}
+
+// Anywhere below the handler, however deep:
+export function currentUser(): User {
+  const { authorization } = currentCtx<RequestCtx>();
+  return authorization.user ?? redirectToLogin();
 }
 `;
 
 md`
-The default-parameter idiom keeps functions honest: callers may inject a context explicitly (tests
-often do), and everything else picks up the ambient one.
+Request scope shadows app scope the way a nested React provider shadows an outer one. Auth stops
+being a parameter that contaminates every signature between the middleware and the permission check:
+in the monorepo this comes from, a couple dozen files call helpers like \`isLoggedIn()\` and
+\`currentUser()\`, and none of the signatures in between mention auth at all. Tests use the same
+seam from the other side — a test that needs an authenticated world adds an auth provider to its
+chain, which is the middleware's per-request extension done by ordinary code.
+
+And this settles the fourth failure mode from the top of the post: no seam for two configurations in
+one process. An \`AsyncLocalStorage\` scope is not a global. Two scopes can be live at once,
+interleaved across \`await\`, and each caller sees the world it entered. The earlier claim that
+these tests are "safe to parallelize" _is_ this property, and it compiles:
+`;
+
+function worldWithUser(name: string) {
+  return Providers(
+    provideConfig,
+    provideRecordingLogger,
+    provideUsers([["u9", name]]),
+    provideGreetingService,
+  );
+}
+
+async function greetAfterYielding(userId: string): Promise<string> {
+  await Promise.resolve(); // force the two scopes to interleave
+  return currentCtx<AppContext>().greetings.greet(userId);
+}
+
+test("two worlds run concurrently without sharing state", async () => {
+  const [fromAdaWorld, fromZoeWorld] = await Promise.all([
+    runWith(worldWithUser("Ada"), () => greetAfterYielding("u9")),
+    runWith(worldWithUser("Zoe"), () => greetAfterYielding("u9")),
+  ]);
+
+  expect(fromAdaWorld).toBe("Hello, Ada!");
+  expect(fromZoeWorld).toBe("Hello, Zoe!");
+});
+
+md`
+Both calls ask the ambient context the same question at the same time and get different answers,
+because each runs inside its own world. Two tenants in one process, a test with fake timers beside
+one without, a preview environment next to production config — the seam is the scope.
+
+## Where it grows
+
+The twenty-line helper below is deliberately minimal: synchronous providers, a toy \`runWith\`. The
+production version of this pattern, extracted as
+[ts-provide](https://github.com/PhotomancerArt/ts-provide), adds the pieces a real app ends up
+wanting:
+
+**Async providers.** Real chains open connections, so providers can be async and the chain awaits
+each one. \`runWithProvider(provider, fn)\` fuses building the chain with entering its ambient
+scope, and \`providerCtx<T>()\` is \`currentCtx\` with guardrails — a proxy that panics with the
+name of the missing key instead of handing back \`undefined\`.
 
 **Wrappers.** Some dependencies are not values but scopes — a database transaction, middleware, fake
 timers. A \`Wrapper\` is a provider that controls the execution scope around the rest of the chain:
