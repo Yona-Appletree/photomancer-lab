@@ -17,22 +17,24 @@ are the ones the rule is about.
 test(
   "private projects are visible only to users granted access",
   TestWorld,
-  async ({ TestOrg, TestUser, projects }) => {
-    const org = await TestOrg.create();
+  async ({ testData, projectService }) => {
+    const org = await testData.org();
     const project = await org.project({ visibility: "private" });
-    const member = await TestUser.create({ orgId: org.id });
-    const outsider = await TestUser.create({ orgId: org.id });
-    await project.grantAccess(member);
+    const orgUser = await org.user();
+    const otherUser = await testData.user();
+    await project.grantAccess(orgUser);
 
-    expect(await projects.canView(member.id, project.id)).toBe(true);
-    expect(await projects.canView(outsider.id, project.id)).toBe(false);
+    expect(await projectService.canView(orgUser.id, project.id)).toBe(true);
+    expect(await projectService.canView(otherUser.id, project.id)).toBe(false);
   },
 );
 
 md`
-Five rows across three tables, five lines of setup. No names, no emails, no ids — defaults cover
-every field the rule does not read. What remains is exactly the specification: two users in the
-project's org, a \`private\` visibility, a grant for one of them, and the rule's answer for each.
+Five lines of setup, five rows — one of them an org you may not have noticed. No names, no emails,
+no ids: defaults cover every field the rule does not read. What remains is exactly the specification
+— a \`private\` project, a user in its org with access granted, a user outside it without — and the
+rule's answer for each. (\`testData.user()\` near the end quietly created a second org to hold
+\`otherUser\`; more on that later.)
 
 [The previous post](/post/2026-08-04-providers/) argued for testing against fakes and real databases
 instead of mocks, with each test declaring its world as a provider chain. This post is about the
@@ -147,41 +149,41 @@ type ProjectProps = Omit<ProjectRow, "id" | "memberIds">;
 type TaskProps = Omit<TaskRow, "id" | "status">;
 
 md`
-The service layer is ordinary application code — \`orgs.create\`, \`projects.canView\`, and so on,
-backed here by an in-memory store and provided as a chain, exactly as in the previous post. The full
-source is in the appendix. The one property that matters now: creates validate their foreign keys,
-the way a real database would.
+The service layer is ordinary application code — \`orgService.create\`, \`projectService.canView\`,
+and so on, backed here by an in-memory store and provided as a chain, exactly as in the previous
+post. The full source is in the appendix. The one property that matters now: creates validate their
+foreign keys, the way a real database would.
 
 ## The shape of a builder
 
-A builder has two sides. The static side makes rows: \`TestUser.create(overrides)\`. The instance
-side is a handle to one existing row: \`TestUser(id)\`. \`Object.assign\` glues them into a single
-symbol, and \`create\` returns the handle, not the row:
+A builder has two sides. Calling it creates a row: \`testData.user({ name: "Radia" })\`. Its
+\`.byId\` wraps an already-existing row in the same kind of handle: \`testData.user.byId(id)\`.
+\`Object.assign\` fuses the two into one symbol, and creating returns the handle, not the row:
 `;
 
-function TestUserBuilder({ orgs, users }: AppServicesCtx) {
-  const TestUser = Object.assign(
-    (id: string) => ({
-      id,
-      get: () => users.get(id),
-    }),
-    {
-      create: async (props: Partial<UserProps> = {}) => {
-        const orgId = props.orgId ?? (await orgs.create({ name: testStr("org") })).id;
-        const name = props.name ?? testStr("user");
+function userBuilder(ctx: AppServicesCtx) {
+  const { orgService, userService } = ctx;
 
-        return TestUser(
-          (await users.create({ email: `${name}@example.com`, ...props, name, orgId })).id,
-        );
-      },
+  const byId = (id: string) => ({
+    id,
+    get: () => userService.get(id),
+  });
+
+  return Object.assign(
+    async (props: Partial<UserProps> = {}) => {
+      const orgId = props.orgId ?? (await orgService.create({ name: testStr("org") })).id;
+      const name = props.name ?? testStr("user");
+
+      return byId(
+        (await userService.create({ email: `${name}@example.com`, ...props, name, orgId })).id,
+      );
     },
+    { byId },
   );
-
-  return TestUser;
 }
 
 md`
-The whole pattern is in \`create\`'s four lines:
+The whole pattern is in the creator's four lines:
 
 - **Every field has a default,** so a test mentions only what it means.
 - **Overrides are one spread.** No fluent \`.withName().withOrg().build()\` ceremony — the overrides
@@ -195,8 +197,8 @@ The whole pattern is in \`create\`'s four lines:
 test(
   "defaults fill what the test does not say; overrides win where it does",
   TestWorld,
-  async ({ TestUser }) => {
-    const user = await TestUser.create({ name: "Radia" });
+  async ({ testData }) => {
+    const user = await testData.user({ name: "Radia" });
     const row = await user.get();
 
     expect(row.name).toBe("Radia");
@@ -236,97 +238,90 @@ exactly what fixture files cannot express and inline setup cannot stop repeating
 relationship three ways, in priority order — and each is one line:
 `;
 
-function TestProjectBuilder(ctx: AppServicesCtx) {
-  const { orgs, projects } = ctx;
+function projectBuilder(ctx: AppServicesCtx) {
+  const { orgService, projectService } = ctx;
 
-  const TestProject = Object.assign(
-    (id: string) => ({
-      id,
-      get: () => projects.get(id),
-      grantAccess: (user: { id: string }) => projects.grantAccess(id, user.id),
-    }),
-    {
-      create: async (props: Partial<ProjectProps> = {}) => {
-        const orgId = props.orgId ?? (await orgs.create({ name: testStr("org") })).id;
+  const byId = (id: string) => ({
+    id,
+    get: () => projectService.get(id),
+    grantAccess: (user: { id: string }) => projectService.grantAccess(id, user.id),
+  });
 
-        return TestProject(
-          (
-            await projects.create({
-              name: testStr("project"),
-              visibility: "org",
-              ...props,
-              orgId,
-            })
-          ).id,
-        );
-      },
+  return Object.assign(
+    async (props: Partial<ProjectProps> = {}) => {
+      const orgId = props.orgId ?? (await orgService.create({ name: testStr("org") })).id;
+
+      return byId(
+        (
+          await projectService.create({
+            name: testStr("project"),
+            visibility: "org",
+            ...props,
+            orgId,
+          })
+        ).id,
+      );
     },
+    { byId },
   );
-
-  return TestProject;
 }
 
-function TestTaskBuilder(ctx: AppServicesCtx) {
-  const { tasks } = ctx;
+function taskBuilder(ctx: AppServicesCtx) {
+  const { taskService } = ctx;
 
-  const TestTask = Object.assign(
-    (id: string) => ({
-      id,
-      get: () => tasks.get(id),
-    }),
-    {
-      create: async (props: Partial<TaskProps> = {}) => {
-        const projectId = props.projectId ?? (await TestProjectBuilder(ctx).create()).id;
+  const byId = (id: string) => ({
+    id,
+    get: () => taskService.get(id),
+  });
 
-        return TestTask((await tasks.create({ title: testStr("task"), ...props, projectId })).id);
-      },
+  return Object.assign(
+    async (props: Partial<TaskProps> = {}) => {
+      const projectId = props.projectId ?? (await projectBuilder(ctx)()).id;
+
+      return byId((await taskService.create({ title: testStr("task"), ...props, projectId })).id);
     },
+    { byId },
   );
-
-  return TestTask;
 }
 
 md`
-Strategy one is an explicit id: \`TestTask.create({ projectId: project.id })\` — the cold open wires
-its users to the org this way. Strategy three is the fallback chain visible above: a bare
-\`TestTask.create()\` asks \`TestProjectBuilder\` for a project, which creates an org of its own.
-One call, three tables, zero setup lines.
+Strategy one is an explicit id: \`testData.project({ orgId: org.id })\` when you already hold the
+parent. Strategy three is the fallback chain visible above: a bare \`testData.task()\` asks the
+project builder for a project, which creates an org of its own — this is what happened to
+\`otherUser\` in the cold open, whose bare \`testData.user()\` landed it in a fresh org. One call, a
+whole ancestry, zero setup lines.
 
 Strategy two is the parent handing out children. The org builder closes the set:
 `;
 
-function TestOrgBuilder(ctx: AppServicesCtx) {
-  const { orgs } = ctx;
+function orgBuilder(ctx: AppServicesCtx) {
+  const { orgService } = ctx;
 
-  const TestOrg = Object.assign(
-    (id: string) => ({
-      id,
-      get: () => orgs.get(id),
-      project: (props: Partial<ProjectProps> = {}) =>
-        TestProjectBuilder(ctx).create({ ...props, orgId: id }),
-      user: (props: Partial<UserProps> = {}) =>
-        TestUserBuilder(ctx).create({ ...props, orgId: id }),
-    }),
-    {
-      create: async (props: Partial<OrgProps> = {}) =>
-        TestOrg((await orgs.create({ name: testStr("org"), ...props })).id),
-    },
+  const byId = (id: string) => ({
+    id,
+    get: () => orgService.get(id),
+    project: (props: Partial<ProjectProps> = {}) => projectBuilder(ctx)({ ...props, orgId: id }),
+    user: (props: Partial<UserProps> = {}) => userBuilder(ctx)({ ...props, orgId: id }),
+  });
+
+  return Object.assign(
+    async (props: Partial<OrgProps> = {}) =>
+      byId((await orgService.create({ name: testStr("org"), ...props })).id),
+    { byId },
   );
-
-  return TestOrg;
 }
 
 md`
-\`org.project({ visibility: "private" })\` from the cold open is this: the caller's overrides spread
-first, the parent's \`orgId\` spread after them. The order is deliberate — a child made through a
-parent cannot be quietly re-parented by an override.
+\`org.project({ visibility: "private" })\` and \`org.user()\` from the cold open are these two
+methods: the caller's overrides spread first, the parent's \`orgId\` spread after them. The order is
+deliberate — a child made through a parent cannot be quietly re-parented by an override.
 `;
 
-test("a bare task builds its entire ancestry", TestWorld, async ({ TestTask, projects, orgs }) => {
-  const task = await TestTask.create();
+test("a bare task builds its entire ancestry", TestWorld, async (ctx) => {
+  const task = await ctx.testData.task();
 
-  const project = await projects.get((await task.get()).projectId);
-  const org = await orgs.get(project.orgId);
+  const project = await ctx.projectService.get((await task.get()).projectId);
+  const org = await ctx.orgService.get(project.orgId);
 
   expect(org.name).toContain("org-");
 });
@@ -334,41 +329,41 @@ test("a bare task builds its entire ancestry", TestWorld, async ({ TestTask, pro
 md`
 ## Handles, not rows
 
-\`create\` returns \`TestThing(id)\` — a handle wrapping nothing but the id. \`get()\` re-reads the
-store every time, so a handle can never go stale. When the code under test mutates a row, asserting
+Creating returns \`byId(id)\` — a handle wrapping nothing but the id. \`get()\` re-reads the store
+every time, so a handle can never go stale. When the code under test mutates a row, asserting
 through the handle sees the mutation:
 `;
 
 test("handles re-read the store, so they see the app's writes", TestWorld, async (ctx) => {
-  const task = await ctx.TestTask.create();
+  const task = await ctx.testData.task();
 
-  await ctx.tasks.complete(task.id); // imagine a route handler did this
+  await ctx.taskService.complete(task.id); // imagine a route handler did this
 
   expect((await task.get()).status).toBe("done");
 });
 
 md`
-And because the instance side is public, a handle can adopt a row the _app_ created. Builder
-ergonomics are not just for setup — they extend to asserting on the system's own writes:
+And because \`.byId\` is public, a handle can adopt a row the _app_ created. Builder ergonomics are
+not just for setup — they extend to asserting on the system's own writes:
 `;
 
-test("builders adopt rows the app created", TestWorld, async ({ TestProject, TestTask, tasks }) => {
-  const project = await TestProject.create();
-  const created = await tasks.create({ projectId: project.id, title: "From the app" });
+test("builders adopt rows the app created", TestWorld, async ({ testData, taskService }) => {
+  const project = await testData.project();
+  const created = await taskService.create({ projectId: project.id, title: "From the app" });
 
-  expect((await TestTask(created.id).get()).title).toBe("From the app");
+  expect((await testData.task.byId(created.id).get()).title).toBe("From the app");
 });
 
 md`
 ## Through the front door
 
-\`TestTask.create\` never touches the store directly. It calls \`tasks.create\` — the same function
-a route handler calls, validation included. Fixtures therefore cannot construct states the
+\`testData.task()\` never touches the store directly. It calls \`taskService.create\` — the same
+function a route handler calls, validation included. Fixtures therefore cannot construct states the
 application cannot reach:
 `;
 
-test("fixtures cannot reference rows that do not exist", TestWorld, async ({ TestTask }) => {
-  await expect(TestTask.create({ projectId: "p_404" })).rejects.toThrow("No such project");
+test("fixtures cannot reference rows that do not exist", TestWorld, async ({ testData }) => {
+  await expect(testData.task({ projectId: "p_404" })).rejects.toThrow("No such project");
 });
 
 md`
@@ -377,33 +372,35 @@ builders are TypeScript, so schema drift breaks the affected tests at compile ti
 expected type failures in this post's checked source:
 `;
 
-test("the compiler checks fixture data", TestWorld, async ({ TestProject, TestUser }) => {
+test("the compiler checks fixture data", TestWorld, async ({ testData }) => {
   // @ts-expect-error "public" is not a visibility this app has.
-  void TestProject.create({ visibility: "public" });
+  void testData.project({ visibility: "public" });
 
   // @ts-expect-error Typos in field names do not survive compilation.
-  void TestUser.create({ nam: "Ada" });
+  void testData.user({ nam: "Ada" });
 });
 
 md`
 ## Builders live in the world
 
-One question is left over from the cold open: where did \`TestOrg\` come from? It was destructured
+One question is left over from the cold open: where did \`testData\` come from? It was destructured
 from the test's context. Builders are provided, like everything else:
 `;
 
-function provideBuilders(ctx: AppServicesCtx) {
+function provideTestData(ctx: AppServicesCtx) {
   return {
-    TestOrg: TestOrgBuilder(ctx),
-    TestUser: TestUserBuilder(ctx),
-    TestProject: TestProjectBuilder(ctx),
-    TestTask: TestTaskBuilder(ctx),
+    testData: {
+      org: orgBuilder(ctx),
+      user: userBuilder(ctx),
+      project: projectBuilder(ctx),
+      task: taskBuilder(ctx),
+    },
   };
 }
-type BuildersCtx = ReturnType<typeof provideBuilders>;
+type TestDataCtx = ReturnType<typeof provideTestData>;
 
 function TestWorld() {
-  return Providers(provideStore, provideAppServices, provideBuilders)();
+  return Providers(provideStore, provideAppServices, provideTestData)();
 }
 
 md`
@@ -415,8 +412,8 @@ It also means shared setup is not a \`beforeEach\` mutating outer variables. A p
 is a longer chain — a data provider that runs builders and hands the handles into context:
 `;
 
-async function provideBaseData({ TestOrg }: BuildersCtx) {
-  const org = await TestOrg.create();
+async function provideBaseData({ testData }: TestDataCtx) {
+  const org = await testData.org();
   const admin = await org.user({ name: "admin" });
 
   return { org, admin };
@@ -425,11 +422,11 @@ async function provideBaseData({ TestOrg }: BuildersCtx) {
 test(
   "shared setup is a provider, not a beforeEach",
   Providers(TestWorld, provideBaseData),
-  async ({ org, admin, projects }) => {
+  async ({ org, admin, projectService }) => {
     const project = await org.project({ visibility: "private" });
     await project.grantAccess(admin);
 
-    expect(await projects.canView(admin.id, project.id)).toBe(true);
+    expect(await projectService.canView(admin.id, project.id)).toBe(true);
   },
 );
 
@@ -444,15 +441,17 @@ These builders are the minimal shape. The production monorepo behind the previou
 of them — one per resource, colocated with the feature they build — and they carry the pattern
 further in a few directions worth knowing about before you need them:
 
-- **Ambient context.** Production builders are module-level statics: tests import \`TestUser\` and
-  call it, and the current world reaches the builder through \`AsyncLocalStorage\` — the
-  ambient-context trick from the previous post — instead of an explicit context parameter.
-  Cross-builder cycles (tenant needs quiz, quiz needs tenant) are broken with lazy imports.
+- **Module-level statics.** Production builders are named \`TestUser\`, \`TestTenant\`, and so on,
+  and tests import them directly instead of pulling \`testData\` from context — the same two-sided
+  \`Object.assign\` shape, with \`TestUser(id)\` as the handle side and \`TestUser.create()\` as the
+  creator. The current world reaches the builder through \`AsyncLocalStorage\` — the ambient-context
+  trick from the previous post. Cross-builder cycles (tenant needs quiz, quiz needs tenant) are
+  broken with lazy imports.
 - **Rollback instead of cleanup.** The world wraps each test in a database transaction that rolls
   back when the test ends. Builders never delete anything; no builder has cleanup code at all.
 - **Two backends, one fixture set.** The custom \`test()\` runs the same body once per configured
   database, so identical builder calls exercise the in-memory store and real Postgres.
-- **Richer handles.** Instance sides grow \`update\`, \`archive()\`, and relationship helpers like
+- **Richer handles.** Handles grow \`update\`, \`archive()\`, and relationship helpers like
   \`admin.grantRoleTo(tenant, "admin")\` — a builder method that takes another builder's handle.
 - **Stories, not just tests.** The same builders drive Storybook. Tests override minimally, so setup
   reads as specification; stories override maximally (\`title: "Badge Summit 2026"\`, real dates,
@@ -468,10 +467,10 @@ const space = await tenant.space({
 `;
 
 md`
-The scale numbers are the evidence that this holds up: nineteen builders, about 1,200
-\`Test*.create()\` call sites across 137 test files, and no faker anywhere — uniqueness is counters,
-and a lint rule bans nondeterministic calls repo-wide. Setup ceremony per test has stayed flat as
-the schema has grown, which is the property I care about most.
+The scale numbers are the evidence that this holds up: nineteen builders, about 1,200 builder-create
+call sites across 137 test files, and no faker anywhere — uniqueness is counters, and a lint rule
+bans nondeterministic calls repo-wide. Setup ceremony per test has stayed flat as the schema has
+grown, which is the property I care about most.
 
 ## Appendix: the world
 
@@ -502,7 +501,7 @@ function provideAppServices({ store }: StoreCtx) {
     return row;
   };
 
-  const orgs = {
+  const orgService = {
     create: async (props: OrgProps) => {
       const row: OrgRow = { id: newId("org"), ...props };
       store.orgs.set(row.id, row);
@@ -511,7 +510,7 @@ function provideAppServices({ store }: StoreCtx) {
     get: async (id: string) => mustGet(store.orgs, id, "org"),
   };
 
-  const users = {
+  const userService = {
     create: async (props: UserProps) => {
       mustGet(store.orgs, props.orgId, "org");
       const row: UserRow = { id: newId("user"), ...props };
@@ -521,7 +520,7 @@ function provideAppServices({ store }: StoreCtx) {
     get: async (id: string) => mustGet(store.users, id, "user"),
   };
 
-  const projects = {
+  const projectService = {
     create: async (props: ProjectProps) => {
       mustGet(store.orgs, props.orgId, "org");
       const row: ProjectRow = { id: newId("project"), memberIds: [], ...props };
@@ -542,7 +541,7 @@ function provideAppServices({ store }: StoreCtx) {
     },
   };
 
-  const tasks = {
+  const taskService = {
     create: async (props: TaskProps) => {
       mustGet(store.projects, props.projectId, "project");
       const row: TaskRow = { id: newId("task"), status: "open", ...props };
@@ -555,7 +554,7 @@ function provideAppServices({ store }: StoreCtx) {
     },
   };
 
-  return { orgs, users, projects, tasks };
+  return { orgService, userService, projectService, taskService };
 }
 type AppServicesCtx = ReturnType<typeof provideAppServices>;
 

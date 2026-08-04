@@ -165,3 +165,18 @@ after).
    fake store); posts stay self-contained.
 4. Cold open: **discriminating-fields test** — ~4 rows in ~4 lines, only
    the fields the rule depends on spelled out.
+
+## Decisions (2026-08-04, post-publish revision)
+
+5. Cold open revised to Yona's shape (provided verbatim after first
+   publish): a lowercase \`testData\` facade in ctx (\`testData.org()\`,
+   \`testData.user()\`, child methods on handles) instead of destructured
+   \`TestOrg\`/\`TestUser\` statics, and services named \`projectService\`
+   etc. so builder vs. service is unambiguous. \`otherUser\` comes from
+   \`testData.user()\` — auto-parented into a *different* org — putting
+   ancestor auto-creation on display in the cold open itself.
+6. Two-sided factory survives as: bare call creates
+   (\`testData.user(props?)\`), \`.byId(id)\` adopts an existing row into a
+   handle. The SBS-style \`TestUser(id)\`/\`TestUser.create()\` module-level
+   statics move to the "Where it grows" provenance notes.
+7. Same slug/URL; this is an in-place content revision of the live post.
