@@ -103,7 +103,7 @@ test("manual composition is just object spread", () => {
 md`
 ## Composing chains
 
-Spreading by hand gets repetitive, so the one piece of machinery I allow myself is a \`Providers\`
+Spreading by hand gets repetitive, so the first piece of machinery I allow myself is a \`Providers\`
 helper that folds a list of providers into a single context-building function. The full
 implementation is at the end of the post; it is about twenty lines of runtime code.
 
@@ -196,35 +196,126 @@ compile error at the call site, pointing at the provider that is missing its inp
 
 ## Tests swap providers, not modules
 
-This is the part that sold me. A test builds the same chain with one link replaced. No \`vi.mock\`,
-no import interception, no shared \`beforeEach\` state:
+This is the part that sold me, so I want to push on it.
+
+A test wants a world: real implementations for the thing under test, fakes for everything noisy
+around it. With module singletons, building that world means intercepting imports and living with
+\`vi.mock\`'s hoisting rules. With providers, the world is a value. Swapping an implementation is
+replacing one link in a chain.
+
+Fakes are providers too, and they can hand their inspection handles back through the context. A
+recording logger returns the logger _and_ the list it records into:
 `;
 
-test("tests swap providers instead of mocking modules", () => {
+const provideRecordingLogger = (): { logger: Logger; messages: string[] } => {
   const messages: string[] = [];
 
-  const provideTestLogger = (): { logger: Logger } => ({
+  return {
     logger: { info: (message) => void messages.push(message) },
-  });
-
-  const testProvider = Providers(
-    provideConfig,
-    provideTestLogger,
-    provideUserStore,
-    provideGreetingService,
-  );
-
-  const ctx = testProvider();
-
-  expect(ctx.greetings.greet("u2")).toBe("Hello, Grace!");
-  expect(messages).toEqual(["greeted Grace"]);
-});
+    messages,
+  };
+};
 
 md`
-The test context is just another provider chain. The compiler checks the fake the same way it checks
-the real thing: \`provideTestLogger\` has to produce a \`Logger\`, or the chain will not build. As
-the app grows, test contexts become composable values — a chain with a fake clock, a chain with an
-in-memory store — instead of setup scattered across hooks.
+And because providers are plain functions, a parameterized fake is a function that returns a
+provider:
+`;
+
+const provideUsers = (entries: Array<[id: string, name: string]>) => {
+  const names = new Map(entries);
+
+  return (): { users: UserStore } => ({
+    users: { findName: (id) => names.get(id) },
+  });
+};
+
+md`
+### A \`test()\` that takes a world
+
+Here is where it gets fun. Vitest's \`test\` takes a name and a function. Ours also accepts a
+provider between them — it builds the context and hands it to the test body:
+`;
+
+import { test as vitestTest } from "vitest";
+
+type AnyProvider = () => object;
+
+export function test(name: string, fn: () => void | Promise<void>): void;
+export function test<TProvider extends AnyProvider>(
+  name: string,
+  provider: TProvider,
+  fn: (ctx: ReturnType<TProvider>) => void | Promise<void>,
+): void;
+export function test(
+  name: string,
+  providerOrFn: AnyProvider | (() => void | Promise<void>),
+  fn?: (ctx: object) => void | Promise<void>,
+): void {
+  if (fn === undefined) {
+    vitestTest(name, providerOrFn as () => void | Promise<void>);
+    return;
+  }
+
+  vitestTest(name, async () => {
+    await fn((providerOrFn as AnyProvider)());
+  });
+}
+
+md`
+The two-argument form passes through untouched, so this is a drop-in replacement for the framework's
+\`test\` — every test in this post actually runs through it. The three-argument form is where the
+pattern pays off: each test declares its world inline, and the world is type-checked.
+`;
+
+test(
+  "each test declares its world",
+  Providers(
+    provideConfig,
+    provideRecordingLogger,
+    provideUsers([["u7", "Radia"]]),
+    provideGreetingService,
+  ),
+  (ctx) => {
+    expect(ctx.greetings.greet("u7")).toBe("Hello, Radia!");
+    expect(ctx.messages).toEqual(["greeted Radia"]);
+  },
+);
+
+md`
+Swapping an implementation is editing the world, not reaching into module internals. And shared
+setup is not a \`beforeEach\` mutating outer variables — it is a base chain that tests extend:
+`;
+
+const quietWorld = Providers(provideConfig, provideRecordingLogger);
+
+test(
+  "worlds compose like any other chain",
+  Providers(quietWorld, provideUsers([]), provideGreetingService),
+  (ctx) => {
+    expect(ctx.greetings.greet("nobody")).toBe("Hello, stranger!");
+    expect(ctx.messages).toEqual(["greeted stranger"]);
+  },
+);
+
+md`
+A test with a broken world does not fail at runtime somewhere inside the body — the chain itself
+refuses to compile:
+`;
+
+// @ts-expect-error A test world that forgets the user store does not compile.
+Providers(provideConfig, provideRecordingLogger, provideGreetingService);
+
+md`
+Notice what quietly disappeared. There is no module mocking and nothing keyed by file paths. There
+is no shared mutable fixture state, so tests stay independent and safe to parallelize. And there is
+no setup split across \`beforeAll\` and \`beforeEach\` hooks — the world a test runs in is named,
+whole, at the top of the test.
+
+The production version of this helper is about forty lines. It adds \`.skip\` and \`.only\`, options
+passthrough, and one trick that earns its keep: it can run the same test body once per configured
+database backend, each pass building the chain with a different database provider. A migration test
+that works on every supported backend is a loop over worlds, not a copied file. Scoped fakes — fake
+timers, transactions rolled back after each test — become wrappers, which are covered below.
 
 ## Where it grows
 
