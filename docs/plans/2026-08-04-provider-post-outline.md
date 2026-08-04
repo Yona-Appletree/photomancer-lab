@@ -80,6 +80,59 @@ to become `function provideConfig() {...}` style). Two options:
   can silently drift from the real test, which is exactly what this blog format exists to
   prevent.
 
+## Proposed revision (2026-08-04): the ambient-context section
+
+**Gap:** Ambient context / `AsyncLocalStorage` — a load-bearing concept in the production system —
+appears only as one paragraph inside the "Where it grows" coda, render-only. The post proves the
+pattern for tests but never answers the reader's next question: *how does application code consume
+the context without threading a `ctx` parameter through every layer?* And it never cashes two
+checks it already wrote:
+
+- Failure mode #4 in beat 3 ("no seam for two configurations per process") is resolved by ALS
+  scoping, but the post never says so.
+- "Tests stay independent and safe to parallelize" (beat 7 close) is asserted, not demonstrated.
+  ALS is *why* many worlds can coexist in one process.
+
+**Grounding (skybridge monorepo):**
+
+- `provider-ctx.ts` — `providerCtx<T>()` proxy over a singleton `AsyncLocalStorage`;
+  `runInContext` / `runWithExtraContext` entry points.
+- `create-handle-app-context.ts` — the per-request story: app chain built once per process, then
+  each request runs inside `runInContext({ ...ctx, authorization, logger: requestLogger, ... })`.
+  Auth claim parsed from the session cookie becomes ambient; ~22 files consume it via
+  `appAuthorization()` / `isLoggedIn()` with no parameter threading.
+- `provider-test.ts` — the test harness wraps every body in `runWithProvider`, i.e. an ALS scope
+  per test; ~210 test files use it. Test auth is just providers (`provideTenantAdminAuth`),
+  mirroring the middleware.
+- `README.test.ts` — house narrative: "React Context/Provider for server code, with
+  AsyncLocalStorage instead of a component tree."
+
+**Proposed new beat 7.5 — "Ambient context: one process, many worlds"** (between "Assembling the
+opening test" and "Where it grows"):
+
+1. The question: threading `ctx` through every call is honest but invasive; module singletons
+   were the ergonomic thing being given up.
+2. Compiled mini-implementation: `runWith(ctx, fn)` + `currentCtx()` over
+   `node:async_hooks` `AsyncLocalStorage` in ~10 lines — real, compiled, asserted.
+3. The request story (render-only sketch modeled on the real SvelteKit handle): boot chain once,
+   per request extend with `authorization` + request-scoped logger; deep code calls
+   `currentUser()`. React-context analogy completes: request scope shadows app scope like a
+   nested provider.
+4. Concurrency payoff as a *compiled* test: `Promise.all` two scopes with different worlds, each
+   sees its own — the proof behind "safe to parallelize" and the fix for failure mode #4.
+5. Default-parameter idiom (`ctx: AppContext = currentCtx()`) moves here from the coda.
+
+"Where it grows" then slims to async providers, wrappers, disposal + ts-provide pointer; the
+Next.js note reads stronger because ALS is now explained rather than name-dropped.
+
+**Decisions (2026-08-04, approved):**
+
+1. Placement: **new full section** between "Assembling the opening test" and "Where it grows".
+2. Examples: **compiled** mini-ALS (`runWith`/`currentCtx` over `node:async_hooks`, ~10 lines)
+   and a **compiled** concurrency test (`Promise.all` of two worlds, each sees its own).
+3. Request-middleware sketch: **render-only code + prose**, modeled on the real SvelteKit handle
+   (SvelteKit types will not compile inside the post).
+
 ## Decisions (2026-08-04)
 
 1. Title: **"Providers: Dependency Injection for Test-Driven TypeScript"** (revised after first
