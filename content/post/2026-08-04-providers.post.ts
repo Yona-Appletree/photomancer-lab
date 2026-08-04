@@ -1,12 +1,13 @@
 import { md, post, ts } from "../../src/ts-post";
 
 post({
-  title: "Each Test Declares Its World",
+  title: "Providers: Dependency Injection for Test-Driven TypeScript",
   date: "2026-08-04",
   description:
     "Tests that declare their entire world inline — type-checked, no mocking, no shared fixtures — powered by twenty lines of plain TypeScript instead of a DI framework.",
   tested: true,
   tags: ["architecture", "typescript"],
+  aliases: ["/post/2026-08-04-each-test-declares-its-world/"],
 });
 
 md`
