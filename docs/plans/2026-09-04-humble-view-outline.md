@@ -101,35 +101,51 @@ config from the providers post.
 
 ```text
 packages/
-  core/            provider helpers (from ts-provide), event bus,
-                   Ux primitives (UxStore, Action types), test()
-  service-core/    service interfaces, real (HTTP) + fake impls,
-                   contract test suite run against both
-  feat-orders/     OrdersUx, OrdersView, tests, stories
-  feat-shipments/  ShipmentsUx, ShipmentsView, tests, stories
+  core/            the pattern, app-agnostic: providers + test(), UxStore,
+                   Action/Affordance, useUx, EventBus, FakeClock
+  core-ui/         shared React components: shadcn/ui primitives plus the
+                   pieces built on them (ActionButton, ActionBar, ConfirmDialog,
+                   StatusBadge) with their own component stories
+  app-core/        Dispatch-wide services: AuthService, HttpClient, Clock,
+                   DispatchEvent union, AppContext type
+  feat-orders/     service/ (OrderService, Http + Fake impls, contract suite,
+                   in-memory routes), ux/ (OrdersState, OrdersOp, OrdersUx,
+                   tests), view/ (OrdersView, OrdersPage, stories), testing/
+  feat-shipments/  same shape
 apps/
-  api/             tiny in-memory HTTP backend the real services talk to
+  api/             node HTTP server mounting each feature's routes
   dashboard/       Vite + React shell composing both features on real services
-  storybook/       full-page stories booting features on fake services;
+  storybook/       config, globs feat-*/src/**/*.stories.tsx, full-app story;
                    published to GitHub Pages
 ```
 
-Dependency rule enforced by the package graph: `feat-* → service-core →
-core`. Features never depend on each other or on `apps/`. Each package's
-tests run alone.
+Dependency rule enforced by the package graph: `feat-* → app-core → core`
+and `feat-* → core-ui → core`. Features never depend on each other or on
+`apps/`. Each package's tests run alone. Each feature owns its own service
+(interface, real, fake, contract suite) and its own in-memory route module
+so the HTTP contract test runs in-process without depending on `apps/api`;
+the api app only mounts the routes.
 
 **Naming (one feature, `orders`):**
 
 | Name | Layer | What it is |
 |---|---|---|
-| `OrderService` | Service | interface; `HttpOrderService`, `FakeOrderService` implement it; `provideOrderService` / `provideFakeOrderService` |
+| `OrderService` | Service | interface; `HttpOrderService`, `FakeOrderService` implement it; `provideOrderService` / `provideFakeOrders` |
+| `OrdersOp` | Ux | typed command union the Ux accepts, plain data |
+| `Affordance` | core | semantic availability of an op as data: available / disabled / forbidden / unavailable, plus reason, confirm, progress |
+| `OrdersAction` | Ux → View | an op paired with its affordance and label; carried by the state |
 | `OrdersState` | Ux → View | data-only, serializable read model the Ux emits |
-| `OrdersAction` | Ux → View | typed action union; each carries semantic availability |
-| `OrdersUx` | Ux | factory function; owns services from ctx; `state`, `subscribe`, `dispatch` |
-| `OrdersView` | View | React component: renders `OrdersState`, dispatches `OrdersAction`, decides nothing |
+| `OrdersUx` | Ux | factory function; owns services from ctx; `state`, `subscribe`, `dispatch(op)`; re-validates affordance on dispatch |
+| `OrdersView` | View | React component of `{ state, dispatch }`: renders, dispatches, decides nothing |
+| `OrdersPage` | View | the one place React meets the Ux: `useUx(ux)` feeding `OrdersView` |
 | `OrdersView.stories` | proof | component stories on hand-built state |
 | `OrdersPage.stories` | proof | full-page stories: `Providers(fakes…, provideOrdersUx)` + play tests |
 | `OrdersUx.test` | proof | Ux tests: `test(name, Providers(fakes…, provideOrdersUx), ctx => …)` |
+
+Op and Action are separate words on purpose: LightPlayer's `ControllerOp` /
+`UiAction` split proved useful; Skybridge's single `UiAction` with callbacks
+did not. Page is its own word so View stays pure and the two kinds of story
+never blur.
 
 **Ux mechanics:** framework-free. A `UxStore<State>` primitive gives
 `getState` / `subscribe`; React consumes it with `useSyncExternalStore` in a
@@ -260,3 +276,20 @@ services."
 5. **Where the demo's implementation plan lives.** In the demo repo itself
    (`docs/plans/`), created by the planning workflow there; this brief owns
    only the post and the demo's shape.
+
+## Decisions (2026-09-04)
+
+1. Domain: **Dispatch** (orders + shipments).
+2. View framework: **React**, because it is the norm, not because it is loved.
+3. Reader: humans primary; two-sentence agent blurb at the top pointing at the
+   repo's `AGENTS.md`.
+4. Repo: `PhotomancerArt/humble-view`, app name Dispatch (proposed, accepted
+   by default).
+5. Read model is `OrdersState`; component is `OrdersView`; connector is
+   `OrdersPage`; `Op` and `Action` are distinct.
+6. Features own their services and in-memory routes; `app-core` holds only
+   cross-cutting services; `core-ui` (shadcn/ui plus shared action
+   components) added at Yona's request.
+7. Real backend: in-process HTTP via each feature's route module, mounted by
+   `apps/api`.
+
