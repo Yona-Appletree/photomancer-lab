@@ -233,3 +233,29 @@ expensive after).
 5. `withAuth` as the handle-method name (your coinage from the
    conversation; alternatives: `as`, `actingAs`). Default `withAuth`
    unless you object.
+
+## Decisions (2026-09-04)
+
+1. **The friend: anonymized.** "A friend who reviews PRs at a storage
+   infrastructure company"; the exchange is paraphrased. Upgrade to
+   named only if he agrees; publishing does not wait on him.
+2. **Title: "World Building: Test Actors for Test-Driven TypeScript".**
+   Dated and slugged for the writing day, `2026-09-04-world-building`,
+   matching the siblings' publish-date convention (rename is cheap until
+   publish).
+3. **Cold open: demo-first**, the conversation as the nut graf.
+4. **Confession: real numbers.** Re-surveyed 2026-09-04 against the
+   monorepo at its 2026-08-01 head: 57 of 322 backend-library test
+   files call `runAsRoot` in their bodies (69 of 454 monorepo-wide);
+   48 test files chain `provideTenantAdminAuth`. Nuance recorded: a
+   per-user chain link (`provideUserAuth`) does exist there; what is
+   missing is the per-call, handle-level idiom.
+5. **Handle method: `withAuth`.**
+6. **Mechanics settled while building the example:** the ambient actor
+   is a mutable cell in context (`auth.current`); `ActingAs` sets it,
+   `withAuth` and the builders' `asSystem` are try/finally swaps of the
+   same cell. Handles read as system too (`get()` is the test's eyes,
+   not the actor's). Every public door takes a user *handle*, never a
+   principal, so there is no expression where a test can spell
+   "system"; the single-file caveat (the appendix's `system` constant
+   is a name in scope) is stated in the post.
