@@ -293,3 +293,34 @@ services."
 7. Real backend: in-process HTTP via each feature's route module, mounted by
    `apps/api`.
 
+
+## Decisions (2026-09-04, demo-repo planning)
+
+Superseding the layout above where they differ; the demo repo's plan is the
+source of truth for the repo:
+`~/.photomancer/planning/humble-view/2026-09-04-1547-dispatch-demo/plan.md`.
+
+1. The pattern package is `ux-core` (not `core`); UI has four layer packages
+   matching Yona's model: `ui-design` (tokens), `ui-core` (shadcn
+   primitives, never imports `ux-core`), `ui-app` (Dispatch's common
+   language, renders affordances), and the page layer inside each feature's
+   `view/`. Features may keep local components at any layer.
+2. A simulated backend package, `backend`, owns the domain model, the
+   in-memory store, the business rules (including delivered-shipment ⇒
+   delivered-order and refund-requires-admin), the Hono routes, fixture
+   builders (`TestOrder`, `TestShipment`) and world providers. Feature fakes
+   call it directly plus a script; `Http*` services call the routes via a
+   fetch-shaped function; the contract suite proves Fake ≡ Http.
+3. Worlds are shared: Ux tests and page stories start from the same chain,
+   e.g. `Providers(provideFakeClock, provideFakeBackend(), provideAdmin,
+   provideOrders([...]), provideFakeOrderService, provideOrdersUx)`. This is
+   the continuity with the providers and fixture-builders posts and belongs
+   in the nut graf.
+4. Deployed to GitHub Pages: dashboard at `/` running the real HTTP services
+   against the Hono routes in-browser (no server), Storybook at
+   `/storybook/`. The post embeds story deep links from there.
+5. The repo carries an ADR (`docs/adr/0001-service-ux-view-layers.md`) and a
+   README that sells each idea with its cost and payoff; the post links both
+   and does not duplicate the README's justification section.
+6. Toolchain: TS 5.9, React 19, Vite 8, vitest 5, Storybook 10 with
+   addon-vitest play tests, Tailwind 4, shadcn copied in, Hono, turbo.
