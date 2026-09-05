@@ -324,3 +324,31 @@ source of truth for the repo:
    and does not duplicate the README's justification section.
 6. Toolchain: TS 5.9, React 19, Vite 8, vitest 5, Storybook 10 with
    addon-vitest play tests, Tailwind 4, shadcn copied in, Hono, turbo.
+
+## Decisions (2026-09-04, drafting)
+
+The demo PR (PhotomancerArt/humble-view#1) merged and Pages is live: the
+dashboard, `/storybook/`, and story deep links all return 200, so the post
+embeds them directly with no placeholder.
+
+1. File: `content/post/2026-09-humble-view.post.ts` (slug as planned; the
+   demo README already links `/post/2026-09-humble-view/`). Date 2026-09-04
+   for the draft; set at publish.
+2. Title: "The Humble View: Tests for the Logic, Stories for the Screen".
+3. Embeds (Storybook `iframe.html?viewMode=story&id=…`): `orders-orderspage--as-admin`
+   at the cold open (interactive, the reader can click Cancel);
+   `app-actionbutton--all-states` in the actions beat;
+   `orders-orderspage--test-cancel-pending-order` at the ring close (the play
+   test runs on load); `dispatch-dispatch--default` in the features beat.
+   Each has an "open in Storybook" link and a source link.
+4. Miniature scope: orders only; no event bus and no `dispose` (one sentence
+   says the repo's Ux adds both); `Http` service and in-process routes are
+   included so the contract suite genuinely runs twice; a small `FakeClock`
+   and `FakeScript` so the in-flight and scripted-failure tests are real.
+   `provideFakeBackend` is a plain provider (no options), unlike the repo's
+   `provideFakeBackend()`.
+5. Provenance names LightPlayer (public) and keeps the SaaS monorepo unnamed,
+   as the earlier posts do.
+6. Beat 8 shows the `Affordance`/`Action` types inside beat 7 (the Ux emits
+   them, so they read better before `OrdersUx`) and keeps the doctrine, the
+   `ActionButton` excerpt, and the `AllStates` story for beat 8.
