@@ -312,9 +312,9 @@ refuses to compile:
 Providers(provideConfig, provideRecordingLogger, provideGreetingService);
 
 md`
-Notice what quietly disappeared. There is no module mocking and nothing keyed by file paths. There
-is no shared mutable fixture state, so tests stay independent and safe to parallelize. And there is
-no setup split across \`beforeAll\` and \`beforeEach\` hooks — the world a test runs in is named,
+Several things are gone. There is no module mocking and nothing keyed by file paths. There is no
+shared mutable fixture state, so tests stay independent and safe to parallelize. And there is no
+setup split across \`beforeAll\` and \`beforeEach\` hooks — the world a test runs in is named,
 whole, at the top of the test.
 
 The production version of this helper is about forty lines. It adds \`.skip\` and \`.only\`, options
