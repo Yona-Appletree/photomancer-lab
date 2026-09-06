@@ -75,7 +75,8 @@ into every story. It builds on [Providers](/post/2026-08-04-providers/) and
 [Fixture Builders](/post/2026-08-04-fixture-builders/) and reuses their provider chain and their
 three-argument \`test()\` without re-explaining them. The pattern is the union of two production
 codebases that each have half of it; the whole of it is a public demo,
-[PhotomancerArt/humble-stack](https://github.com/PhotomancerArt/humble-stack), with a
+[PhotomancerArt/humble-stack](https://github.com/PhotomancerArt/humble-stack): the **humble stack**,
+a frontend stack built around this idea and named after it, with a
 [live dashboard](https://photomancerart.github.io/humble-stack/) and a
 [Storybook](https://photomancerart.github.io/humble-stack/storybook/). The compiled code in this
 post is a self-contained miniature of the demo's orders feature. Like every example on this page, it
@@ -1024,8 +1025,11 @@ full-app story does the same inside Storybook:
   · <a href="https://photomancerart.github.io/humble-stack/storybook/?path=/story/dispatch-dispatch--default" target="_blank">open in Storybook ↗</a>
 </p>
 
-The reasons behind each package, including the four UI layers, are in the repo's
-[README](https://github.com/PhotomancerArt/humble-stack#readme) and
+The humble view is one of the stack's nine decisions. The others, providers and worlds, builders,
+component layers, feature modules, are in the humble stack's
+[README](https://github.com/PhotomancerArt/humble-stack#readme), each in the same shape: the
+problem, the decision, what it replaces, where the idea comes from, and what it costs. The layering
+itself is
 [ADR 0001](https://github.com/PhotomancerArt/humble-stack/blob/main/docs/adr/0001-service-ux-view-layers.md).
 
 ## Provenance
