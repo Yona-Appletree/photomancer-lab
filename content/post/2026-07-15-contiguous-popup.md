@@ -106,7 +106,7 @@ const sweep = (din.x * dout.y - din.y * dout.x) > 0 ? 1 : 0;
 d += `L${p1.x} ${p1.y} A${r} ${r} 0 0 ${sweep} ${p2.x} ${p2.y}`;
 ```
 
-This is the punchline: **the concave corner, the thing that costs CSS implementations
+**The concave corner, the thing that costs CSS implementations
 their gnarliest hacks, is not a special case.** A convex corner turns one way, a
 concave corner turns the other, and the sweep flag flips automatically. Same six lines
 of code.
@@ -161,13 +161,13 @@ Other things become one-liners in this model:
   the border around the button" is literally `inflate(rect, 3)`.
 - **A gradient that flows across the whole shape.** Because button and popup are one
   path, one `linearGradient` fills both continuously. The CSS version can't do this at
-  all: its "background" is several rectangles conspiring.
+  all: its "background" is several separate rectangles.
 - **One correct shadow.** `drop-shadow` on the merged path. The multi-element version
   gets shadows subtly wrong at the seam, always.
 - **Reveal the popup's content** by clipping it with an `inset(... round r)` that tracks
   the animated rect.
 
-## Caveats, honestly
+## Caveats
 
 - It's JavaScript-driven presentation. Pre-hydration you need a plain-border fallback,
   and a hostile layout (fonts loading, content reflow) can lag the outline by a frame if
@@ -189,5 +189,5 @@ core has no DOM dependencies, which is the point: the plan is to port it into my
 TypeScript version for work, with thin per-framework glue doing the measuring.
 
 It still surprises me that there's no established library for "draw one outline around
-these DOM elements." If you know of one (or know why there isn't), I'd genuinely like
-to hear about it.
+these DOM elements." If you know of one (or know why there isn't), I'd like to hear
+about it.

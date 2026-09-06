@@ -25,7 +25,7 @@ function publish(post: Post) {
 }
 ```
 
-The shape of the code is almost suspiciously simple: `Person(...)` makes a person, `Post(...)` makes a post, and the type names line up with the runtime functions. That last part is the trick. In TypeScript, values and types live in different namespaces, so `Post` can be both a factory function and the name of the type it returns.
+The shape is simple: `Person(...)` makes a person, `Post(...)` makes a post, and the type names line up with the runtime functions. That last part is the trick. In TypeScript, values and types live in different namespaces, so `Post` can be both a factory function and the name of the type it returns.
 
 I also like the naming convention here: `Factory` over `class`. A PascalCase factory gives the call site the weight of a named domain concept without requiring the implementation to become an instance type with a prototype.
 
@@ -88,7 +88,7 @@ The factory gives you three things in one place:
 - `type Person = ReturnType<typeof Person>` gives consumers the runtime output type.
 - `Person.schema` keeps the original Zod schema available for composition.
 
-That third part matters more than it looks like it should. Once every domain shape has a `.schema`, nested data stays easy to assemble:
+That third part does the most work. Once every domain shape has a `.schema`, nested data stays easy to assemble:
 
 ```ts
 const Comment = ZodFactory(
@@ -114,7 +114,7 @@ TypeScript classes are first-class, built-in, and well-supported. If you like cl
 
 I tend not to, for this kind of data.
 
-Plain values compose more quietly than instances. They serialize cleanly, compare predictably, and don't make me wonder which methods, prototype behavior, or `this` binding might matter. Most data transfer objects in an application are not little actors with private lives. They are just validated records crossing boundaries.
+Plain values are easier to compose than instances. They serialize cleanly, compare predictably, and don't make me wonder which methods, prototype behavior, or `this` binding might matter. Most data transfer objects in an application have no behavior and no identity. They are validated records crossing boundaries.
 
 The convention I want is class-shaped naming, not class-shaped machinery. `User(...)` reads like "make a user" and `type User` reads like "this is a user." That buys the ergonomic part of classes while keeping the value itself a boring object.
 
@@ -180,7 +180,7 @@ For async refinements, same idea: use `User.schema.parseAsync(input)`. You could
 
 ## When I reach for it
 
-I like this pattern for API request and response shapes, database rows and resources, configuration objects, fixtures, and domain records that need runtime validation. I don't use it for every local function parameter or component prop. The pattern earns its keep when the same shape crosses a boundary and needs to be both a runtime value and a TypeScript type.
+I like this pattern for API request and response shapes, database rows and resources, configuration objects, fixtures, and domain records that need runtime validation. I don't use it for every local function parameter or component prop. The pattern pays off when the same shape crosses a boundary and needs to be both a runtime value and a TypeScript type.
 
 The whole point is modest: make the good path short.
 
