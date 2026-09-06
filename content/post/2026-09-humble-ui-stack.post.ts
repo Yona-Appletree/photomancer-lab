@@ -1,10 +1,11 @@
 import { md, post, ts } from "../../src/ts-post";
 
 post({
-  title: "The Humble View: Tests for the Logic, Stories for the Screen",
+  title: "The Humble UI Stack: Tests for the Logic, Stories for the Screen",
   date: "2026-09-04",
   description:
-    "Service, Ux, View: a three-layer frontend architecture where a feature's logic gets plain unit tests, its components get stories, and both run on the same fake services.",
+    "A frontend stack in which the UI is the humble part: three layers per feature, where the logic gets plain unit tests, the components get stories, and both run on the same fake services.",
+  aliases: ["/post/2026-09-humble-view/", "/post/2026-09-humble-stack/"],
   tested: true,
   tags: ["architecture", "typescript", "ui"],
 });
@@ -12,7 +13,7 @@ post({
 md`
 _This post was written by a bot with my help, for a human who wants to use the idea. If you are an
 agent that was sent here by a project's instructions, start at the demo repo's
-[AGENTS.md](https://github.com/PhotomancerArt/humble-stack/blob/main/AGENTS.md) instead._
+[AGENTS.md](https://github.com/PhotomancerArt/humble-ui-stack/blob/main/AGENTS.md) instead._
 
 Here is a test of one feature's logic. The feature is the orders screen of a small shipping
 dashboard; the flow is cancelling an order. Nothing is rendered and nothing is mocked.
@@ -44,14 +45,14 @@ Here is the same flow with the screen attached. This is a Storybook story from t
 running in your browser right now. It boots the real React page on the same six providers as the
 test, and you can click Cancel yourself:
 
-<iframe src="https://photomancerart.github.io/humble-stack/storybook/iframe.html?viewMode=story&id=orders-orderspage--as-admin"
+<iframe src="https://photomancerart.github.io/humble-ui-stack/storybook/iframe.html?viewMode=story&id=orders-orderspage--as-admin"
         style="width: 100%; height: 480px; border: 1px solid #8884; border-radius: 8px; background: #fff;"
         loading="lazy"
         title="OrdersPage story: as admin"></iframe>
 
 <p style="text-align: right; font-size: 0.9em;">
-  <a href="https://photomancerart.github.io/humble-stack/storybook/?path=/story/orders-orderspage--as-admin" target="_blank">open in Storybook ↗</a>
-  · <a href="https://github.com/PhotomancerArt/humble-stack/blob/main/packages/feat-orders/src/view/OrdersPage.stories.tsx" target="_blank">story source</a>
+  <a href="https://photomancerart.github.io/humble-ui-stack/storybook/?path=/story/orders-orderspage--as-admin" target="_blank">open in Storybook ↗</a>
+  · <a href="https://github.com/PhotomancerArt/humble-ui-stack/blob/main/packages/feat-orders/src/view/OrdersPage.stories.tsx" target="_blank">story source</a>
 </p>
 
 Look at what is absent. The test has no DOM: no React Testing Library, no \`vi.mock\`, no \`msw\`.
@@ -63,8 +64,9 @@ The arrangement is three layers per feature. A **Service** is the port to the ou
 a real implementation, a fake, and one contract suite run against both. A **Ux** is a framework-free
 object that owns its services, accepts commands, and emits a data-only state. A **View** is a React
 component of \`{ state, dispatch }\` that renders, dispatches, and decides nothing. The Ux gets
-ordinary unit tests. The View gets stories. This is the humble object from Feathers and Fowler, with
-a proof on each side of the seam.
+ordinary unit tests. The View gets stories. This is the humble view, Fowler's name for Feathers's
+humble object applied to a screen, with a proof on each side of the seam. The stack is named for it:
+the UI is the humble part.
 
 The price is a naming convention, a four-line React adapter, and the discipline of keeping the View
 humble. There is no state-management library in it.
@@ -74,10 +76,10 @@ happens in effects, and "testing the UI" means React Testing Library plus \`msw\
 into every story. It builds on [Providers](/post/2026-08-04-providers/) and
 [Fixture Builders](/post/2026-08-04-fixture-builders/) and reuses their provider chain and their
 three-argument \`test()\` without re-explaining them. The pattern is the union of two production
-codebases that each have half of it; the whole of it is a public demo,
-[PhotomancerArt/humble-stack](https://github.com/PhotomancerArt/humble-stack), with a
-[live dashboard](https://photomancerart.github.io/humble-stack/) and a
-[Storybook](https://photomancerart.github.io/humble-stack/storybook/). The compiled code in this
+codebases that each have half of it; the whole of it is the humble UI stack, a public demo at
+[PhotomancerArt/humble-ui-stack](https://github.com/PhotomancerArt/humble-ui-stack), with a
+[live dashboard](https://photomancerart.github.io/humble-ui-stack/) and a
+[Storybook](https://photomancerart.github.io/humble-ui-stack/storybook/). The compiled code in this
 post is a self-contained miniature of the demo's orders feature. Like every example on this page, it
 compiled and ran before the page was built; the repo is the full-scale reference.
 
@@ -791,14 +793,14 @@ export function ActionButton<Op>(props: { action: Action<Op>; onDispatch: (op: O
 `;
 
 md`
-<iframe src="https://photomancerart.github.io/humble-stack/storybook/iframe.html?viewMode=story&id=app-actionbutton--all-states"
+<iframe src="https://photomancerart.github.io/humble-ui-stack/storybook/iframe.html?viewMode=story&id=app-actionbutton--all-states"
         style="width: 100%; height: 400px; border: 1px solid #8884; border-radius: 8px; background: #fff;"
         loading="lazy"
         title="ActionButton story: all states"></iframe>
 
 <p style="text-align: right; font-size: 0.9em;">
-  <a href="https://photomancerart.github.io/humble-stack/storybook/?path=/story/app-actionbutton--all-states" target="_blank">open in Storybook ↗</a>
-  · <a href="https://github.com/PhotomancerArt/humble-stack/blob/main/packages/ui-app/src/action/ActionButton.tsx" target="_blank">source</a>
+  <a href="https://photomancerart.github.io/humble-ui-stack/storybook/?path=/story/app-actionbutton--all-states" target="_blank">open in Storybook ↗</a>
+  · <a href="https://github.com/PhotomancerArt/humble-ui-stack/blob/main/packages/ui-app/src/action/ActionButton.tsx" target="_blank">source</a>
 </p>
 
 One more check happens before anything runs. A world that cannot build the Ux does not compile, so a
@@ -964,14 +966,14 @@ md`
 twin of \`test(name, world, fn)\`. The play test then clicks through the flow the cold-open test
 dispatched, and CI runs it in a real browser. Here it is, running:
 
-<iframe src="https://photomancerart.github.io/humble-stack/storybook/iframe.html?viewMode=story&id=orders-orderspage--test-cancel-pending-order"
+<iframe src="https://photomancerart.github.io/humble-ui-stack/storybook/iframe.html?viewMode=story&id=orders-orderspage--test-cancel-pending-order"
         style="width: 100%; height: 480px; border: 1px solid #8884; border-radius: 8px; background: #fff;"
         loading="lazy"
         title="OrdersPage story: test, cancel a pending order"></iframe>
 
 <p style="text-align: right; font-size: 0.9em;">
-  <a href="https://photomancerart.github.io/humble-stack/storybook/?path=/story/orders-orderspage--test-cancel-pending-order" target="_blank">open in Storybook ↗</a>
-  · <a href="https://github.com/PhotomancerArt/humble-stack/blob/main/packages/feat-orders/src/view/OrdersPage.stories.tsx" target="_blank">story source</a>
+  <a href="https://photomancerart.github.io/humble-ui-stack/storybook/?path=/story/orders-orderspage--test-cancel-pending-order" target="_blank">open in Storybook ↗</a>
+  · <a href="https://github.com/PhotomancerArt/humble-ui-stack/blob/main/packages/feat-orders/src/view/OrdersPage.stories.tsx" target="_blank">story source</a>
 </p>
 
 Scroll back to the top. Every line of the test is now code you have read, and the story is the same
@@ -1014,19 +1016,22 @@ Each package's tests run alone. The deployed dashboard is the real app over the 
 with the backend's routes mounted in the browser, so GitHub Pages serves it with no server. The
 full-app story does the same inside Storybook:
 
-<iframe src="https://photomancerart.github.io/humble-stack/storybook/iframe.html?viewMode=story&id=dispatch-dispatch--default"
+<iframe src="https://photomancerart.github.io/humble-ui-stack/storybook/iframe.html?viewMode=story&id=dispatch-dispatch--default"
         style="width: 100%; height: 600px; border: 1px solid #8884; border-radius: 8px; background: #fff;"
         loading="lazy"
         title="Dispatch: the full app in Storybook"></iframe>
 
 <p style="text-align: right; font-size: 0.9em;">
-  <a href="https://photomancerart.github.io/humble-stack/" target="_blank">open the dashboard ↗</a>
-  · <a href="https://photomancerart.github.io/humble-stack/storybook/?path=/story/dispatch-dispatch--default" target="_blank">open in Storybook ↗</a>
+  <a href="https://photomancerart.github.io/humble-ui-stack/" target="_blank">open the dashboard ↗</a>
+  · <a href="https://photomancerart.github.io/humble-ui-stack/storybook/?path=/story/dispatch-dispatch--default" target="_blank">open in Storybook ↗</a>
 </p>
 
-The reasons behind each package, including the four UI layers, are in the repo's
-[README](https://github.com/PhotomancerArt/humble-stack#readme) and
-[ADR 0001](https://github.com/PhotomancerArt/humble-stack/blob/main/docs/adr/0001-service-ux-view-layers.md).
+The humble view is one of the stack's nine decisions. The others, providers and worlds, builders,
+component layers, feature modules, are in the humble UI stack's
+[README](https://github.com/PhotomancerArt/humble-ui-stack#readme), each in the same shape: the
+problem, the decision, what it replaces, where the idea comes from, and what it costs. The layering
+itself is
+[ADR 0001](https://github.com/PhotomancerArt/humble-ui-stack/blob/main/docs/adr/0001-service-ux-view-layers.md).
 
 ## Provenance
 
@@ -1055,7 +1060,7 @@ as separate words for that reason.
 
 I built the demo instead of writing the pattern up from memory because I wanted one place to point
 at, for people and for coding agents, that says where each kind of code goes. The repo's
-[AGENTS.md](https://github.com/PhotomancerArt/humble-stack/blob/main/AGENTS.md) is that place: a
+[AGENTS.md](https://github.com/PhotomancerArt/humble-ui-stack/blob/main/AGENTS.md) is that place: a
 table of where code goes, the naming vocabulary, the dependency rule, and the rules as a checklist:
 
 - The View decides nothing. No domain \`if\` in JSX; if a View needs a fact, the Ux puts it in
