@@ -10,7 +10,7 @@ post({
 });
 
 md`
-Here is a test of an access rule. Every row it needs, it makes — and the only fields it spells out
+Here is a test of an access rule. Every row it needs, it makes, and the only fields it spells out
 are the ones the rule is about.
 `;
 
@@ -30,27 +30,27 @@ test(
 );
 
 md`
-Five lines of setup, five rows — one of them an org you may not have noticed. No names, no emails,
+Five lines of setup, five rows (one of them an org you may not have noticed). No names, no emails,
 no ids: defaults cover every field the rule does not read. What remains is exactly the specification
-— a \`private\` project, a user in its org with access granted, a user outside it without — and the
+(a \`private\` project, a user in its org with access granted, a user outside it without) and the
 rule's answer for each. (\`testData.user()\` near the end quietly created a second org to hold
 \`otherUser\`; more on that later.)
 
 [The previous post](/post/2026-08-04-providers/) argued for testing against fakes and real databases
 instead of mocks, with each test declaring its world as a provider chain. This post is about the
-problem you inherit the moment you win that argument. A mock carries its data inside itself — "when
+problem you inherit the moment you win that argument. A mock carries its data inside itself: "when
 \`findUser\` runs, return this literal." A fake store or a real database starts _empty_. Something
 has to put rows in it, in every test, without burying the point of the test.
 
 The answer that has held up for me is the fixture builder: one small typed factory per resource that
 creates real rows through the app's own code paths, defaults every field you don't mention, resolves
-relationships — creating ancestors if needed — and returns a live handle instead of a stale row. The
+relationships (creating ancestors if needed), and returns a live handle instead of a stale row. The
 price is about twenty lines per resource, every builder the same shape, no library. Like every
 example on this page, the code above compiled and ran before the page was built.
 
 ## The usual answers
 
-The first reflex is a fixture file — a seed loaded before the suite runs:
+The first reflex is a fixture file, a seed loaded before the suite runs:
 `;
 
 md`
@@ -69,19 +69,19 @@ md`
 `;
 
 md`
-Tests against it read like \`expect(await canView("u2", "p1")).toBe(false)\` — correct today, and
+Tests against it read like \`expect(await canView("u2", "p1")).toBe(false)\`, correct today and
 rotting on a schedule the file itself sets:
 
 1. **It is shared.** Every test runs against the same world, so nobody can change the file without
    re-auditing every test that reads it. Fixture files only grow.
 2. **It is untyped.** Rename a column and the JSON keeps parsing. The failure surfaces at a
    distance, in whichever test happens to read the stale field.
-3. **It is invisible.** \`"u2"\` means "a user who is not a member of p1" — but that fact lives in
+3. **It is invisible.** \`"u2"\` means "a user who is not a member of p1", but that fact lives in
    another file, encoded as the _absence_ of an id in an array. The test states its inputs nowhere.
 4. **It does not compose.** "Same thing, but with the grant" is a new hand-maintained entry, not a
    function call.
 
-The second reflex is inline setup — every test inserts its own rows:
+The second reflex is inline setup. Every test inserts its own rows:
 `;
 
 ts`
@@ -149,8 +149,8 @@ type ProjectProps = Omit<ProjectRow, "id" | "memberIds">;
 type TaskProps = Omit<TaskRow, "id" | "status">;
 
 md`
-The service layer is ordinary application code — \`orgService.create\`, \`projectService.canView\`,
-and so on, backed here by an in-memory store and provided as a chain, exactly as in the previous
+The service layer is ordinary application code (\`orgService.create\`, \`projectService.canView\`,
+and so on), backed here by an in-memory store and provided as a chain, exactly as in the previous
 post. The full source is in the appendix. The one property that matters now: creates validate their
 foreign keys, the way a real database would.
 
@@ -186,7 +186,7 @@ md`
 The whole pattern is in the creator's four lines:
 
 - **Every field has a default,** so a test mentions only what it means.
-- **Overrides are one spread.** No fluent \`.withName().withOrg().build()\` ceremony — the overrides
+- **Overrides are one spread.** No fluent \`.withName().withOrg().build()\` ceremony. The overrides
   object is typed \`Partial<UserProps>\`, so the compiler already knows the vocabulary.
 - **Resolved fields land after the spread.** \`name\` and \`orgId\` are computed before the call, so
   they are spread last; correlated defaults stay correlated (the default email is derived from the
@@ -222,20 +222,20 @@ function testStr(prefix: string): string {
 
 md`
 Not faker, not \`randomUUID\`. A default like \`user-3\` is unique, readable in a failure message,
-and identical across runs — so a changed test output means changed behavior, not changed data. (In
+and identical across runs, so a changed test output means changed behavior, not changed data. (In
 the production version of this pattern the counter lives in a provided fake clock service, scoped
 per world; module-level is enough here.)
 
 There is a quieter point underneath. Every defaulted field is a declaration: the cold open never
 mentions emails, so it is on record as not depending on them. When a test does override a field,
-that field is load-bearing. The defaults are not just convenience — they are what makes the
-overrides legible as the specification.
+that field is load-bearing. The defaults are not just convenience: they are what makes the overrides
+legible as the specification.
 
 ## Relationships are the real problem
 
 Test data is hard because rows point at rows: a task needs a project, which needs an org. This is
 exactly what fixture files cannot express and inline setup cannot stop repeating. Builders resolve a
-relationship three ways, in priority order — and each is one line:
+relationship three ways, in priority order, and each is one line:
 `;
 
 function projectBuilder(ctx: AppServicesCtx) {
@@ -287,7 +287,7 @@ function taskBuilder(ctx: AppServicesCtx) {
 md`
 Strategy one is an explicit id: \`testData.project({ orgId: org.id })\` when you already hold the
 parent. Strategy three is the fallback chain visible above: a bare \`testData.task()\` asks the
-project builder for a project, which creates an org of its own — this is what happened to
+project builder for a project, which creates an org of its own. This is what happened to
 \`otherUser\` in the cold open, whose bare \`testData.user()\` landed it in a fresh org. One call, a
 whole ancestry, zero setup lines.
 
@@ -314,7 +314,7 @@ function orgBuilder(ctx: AppServicesCtx) {
 md`
 \`org.project({ visibility: "private" })\` and \`org.user()\` from the cold open are these two
 methods: the caller's overrides spread first, the parent's \`orgId\` spread after them. The order is
-deliberate — a child made through a parent cannot be quietly re-parented by an override.
+deliberate: a child made through a parent cannot be quietly re-parented by an override.
 `;
 
 test("a bare task builds its entire ancestry", TestWorld, async (ctx) => {
@@ -329,7 +329,7 @@ test("a bare task builds its entire ancestry", TestWorld, async (ctx) => {
 md`
 ## Handles, not rows
 
-Creating returns \`byId(id)\` — a handle wrapping nothing but the id. \`get()\` re-reads the store
+Creating returns \`byId(id)\`, a handle wrapping nothing but the id. \`get()\` re-reads the store
 every time, so a handle can never go stale. When the code under test mutates a row, asserting
 through the handle sees the mutation:
 `;
@@ -344,7 +344,7 @@ test("handles re-read the store, so they see the app's writes", TestWorld, async
 
 md`
 And because \`.byId\` is public, a handle can adopt a row the _app_ created. Builder ergonomics are
-not just for setup — they extend to asserting on the system's own writes:
+not just for setup. They extend to asserting on the system's own writes:
 `;
 
 test("builders adopt rows the app created", TestWorld, async ({ testData, taskService }) => {
@@ -357,7 +357,7 @@ test("builders adopt rows the app created", TestWorld, async ({ testData, taskSe
 md`
 ## Through the front door
 
-\`testData.task()\` never touches the store directly. It calls \`taskService.create\` — the same
+\`testData.task()\` never touches the store directly. It calls \`taskService.create\`, the same
 function a route handler calls, validation included. Fixtures therefore cannot construct states the
 application cannot reach:
 `;
@@ -406,10 +406,10 @@ function TestWorld() {
 md`
 \`TestWorld\` is the previous post's playbook applied to data: store, then services, then builders,
 one chain. "Which fixtures does this test have" and "which services does this test have" are now the
-same question with the same answer — read the chain.
+same question with the same answer: read the chain.
 
 It also means shared setup is not a \`beforeEach\` mutating outer variables. A pre-populated world
-is a longer chain — a data provider that runs builders and hands the handles into context:
+is a longer chain, a data provider that runs builders and hands the handles into context:
 `;
 
 async function provideBaseData({ testData }: TestDataCtx) {
@@ -438,13 +438,13 @@ only fields named are the ones the rule under test reads.
 ## Where it grows
 
 These builders are the minimal shape. The production monorepo behind the previous post has nineteen
-of them — one per resource, colocated with the feature they build — and they carry the pattern
+of them (one per resource, colocated with the feature they build), and they carry the pattern
 further in a few directions worth knowing about before you need them:
 
 - **Module-level statics.** Production builders are named \`TestUser\`, \`TestTenant\`, and so on,
-  and tests import them directly instead of pulling \`testData\` from context — the same two-sided
+  and tests import them directly instead of pulling \`testData\` from context: the same two-sided
   \`Object.assign\` shape, with \`TestUser(id)\` as the handle side and \`TestUser.create()\` as the
-  creator. The current world reaches the builder through \`AsyncLocalStorage\` — the ambient-context
+  creator. The current world reaches the builder through \`AsyncLocalStorage\`, the ambient-context
   trick from the previous post. Cross-builder cycles (tenant needs quiz, quiz needs tenant) are
   broken with lazy imports.
 - **Rollback instead of cleanup.** The world wraps each test in a database transaction that rolls
@@ -452,7 +452,7 @@ further in a few directions worth knowing about before you need them:
 - **Two backends, one fixture set.** The custom \`test()\` runs the same body once per configured
   database, so identical builder calls exercise the in-memory store and real Postgres.
 - **Richer handles.** Handles grow \`update\`, \`archive()\`, and relationship helpers like
-  \`admin.grantRoleTo(tenant, "admin")\` — a builder method that takes another builder's handle.
+  \`admin.grantRoleTo(tenant, "admin")\`, a builder method that takes another builder's handle.
 - **Stories, not just tests.** The same builders drive Storybook. Tests override minimally, so setup
   reads as specification; stories override maximally (\`title: "Badge Summit 2026"\`, real dates,
   real names), so screens read as product. One factory serves both:
@@ -468,13 +468,13 @@ const space = await tenant.space({
 
 md`
 The scale numbers are the evidence that this holds up: nineteen builders, about 1,200 builder-create
-call sites across 137 test files, and no faker anywhere — uniqueness is counters, and a lint rule
+call sites across 137 test files, and no faker anywhere. Uniqueness is counters, and a lint rule
 bans nondeterministic calls repo-wide. Setup ceremony per test has stayed flat as the schema has
 grown, which is the property I care about most.
 
 ## Appendix: the world
 
-Everything the examples depend on, in full. First the app itself — the store and the services. Note
+Everything the examples depend on, in full. First the app itself: the store and the services. Note
 that the services validate foreign keys on create; that validation is what the builders inherit by
 going through the front door:
 `;
@@ -617,6 +617,6 @@ export function test(
 
 md`
 A mock answers "what would the database say?" from inside the test. A builder puts the answer in the
-database — through the same door the application uses, with the compiler reading the setup over your
+database, through the same door the application uses, with the compiler reading the setup over your
 shoulder. Fixture files rot; fixture builders are butter.
 `;

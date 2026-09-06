@@ -4,7 +4,7 @@ post({
   title: "Providers: Dependency Injection for Test-Driven TypeScript",
   date: "2026-08-04",
   description:
-    "Tests that declare their entire world inline — type-checked, no mocking, no shared fixtures — powered by twenty lines of plain TypeScript instead of a DI framework.",
+    "Tests that declare their entire world inline (type-checked, no mocking, no shared fixtures), powered by twenty lines of plain TypeScript instead of a DI framework.",
   tested: true,
   tags: ["architecture", "typescript"],
   aliases: ["/post/2026-08-04-each-test-declares-its-world/"],
@@ -30,21 +30,21 @@ test(
 
 md`
 There is no \`vi.mock\` and no module interception. There is no \`beforeEach\`, no shared fixture
-state, no container, no decorators. The test's second argument declares its entire world — real
-greeting service, a recording logger, a user store with exactly one user — and the body receives
+state, no container, no decorators. The test's second argument declares its entire world (real
+greeting service, a recording logger, a user store with exactly one user), and the body receives
 that world, fully typed. A different world is a different chain. If the world is missing something
 the service needs, the test does not fail at runtime; it fails to compile.
 
 That test is not pseudocode. Like every example in this post, it compiled and ran before this page
 was built.
 
-This post is for the TypeScript engineer — often with a Next.js app — who has no dependency
-injection and a growing sense that tests are harder than they should be. The usual advice at that
-point is to adopt a DI framework: decorators, containers, tokens, module scanning. The price here is
-different: about twenty lines of plain TypeScript, shown in full by the end. I have been running
-this pattern in a production monorepo for a while now, and the extracted core lives in
+This post is for the TypeScript engineer, often with a Next.js app, who has no dependency injection
+and a growing sense that tests are harder than they should be. The usual advice at that point is to
+adopt a DI framework: decorators, containers, tokens, module scanning. The price here is different:
+about twenty lines of plain TypeScript, shown in full by the end. I have been running this pattern
+in a production monorepo for a while now, and the extracted core lives in
 [ts-provide](https://github.com/PhotomancerArt/ts-provide). By the end of the post you will be able
-to read — and own — every line behind the opening example.
+to read, and own, every line behind the opening example.
 
 ## Why you can't write this test today
 
@@ -134,7 +134,7 @@ Spreading by hand gets repetitive, so the first piece of machinery is a \`Provid
 folds a list of providers into a single context-building function. The full implementation is at the
 end of the post; it is about twenty lines of runtime code.
 
-Two more providers make the example honest — a user store and the greeting service from the opening
+Two more providers make the example honest: a user store and the greeting service from the opening
 test, which depends on three earlier pieces of context:
 `;
 
@@ -253,7 +253,7 @@ function provideUsers(entries: Array<[id: string, name: string]>) {
 md`
 ### A \`test()\` that takes a world
 
-Vitest's \`test\` takes a name and a function. Ours also accepts a provider between them — it builds
+Vitest's \`test\` takes a name and a function. Ours also accepts a provider between them. It builds
 the context and hands it to the test body:
 `;
 
@@ -284,12 +284,12 @@ export function test(
 
 md`
 The two-argument form passes through untouched, so this is a drop-in replacement for the framework's
-\`test\` — every test in this post, including the plain ones above, runs through it.
+\`test\`. Every test in this post, including the plain ones above, runs through it.
 
 That is the whole apparatus. Scroll back to the opening example: the chain, the fakes, the typed
-context — every line of it is now code you have read. Swapping an implementation is editing the
+context. Every line of it is now code you have read. Swapping an implementation is editing the
 world, not reaching into module internals. And shared setup is not a \`beforeEach\` mutating outer
-variables — it is a base chain that tests extend:
+variables. It is a base chain that tests extend:
 `;
 
 const quietWorld = Providers(provideConfig, provideRecordingLogger);
@@ -304,7 +304,7 @@ test(
 );
 
 md`
-A test with a broken world does not fail at runtime somewhere inside the body — the chain itself
+A test with a broken world does not fail at runtime somewhere inside the body. The chain itself
 refuses to compile:
 `;
 
@@ -314,27 +314,27 @@ Providers(provideConfig, provideRecordingLogger, provideGreetingService);
 md`
 Several things are gone. There is no module mocking and nothing keyed by file paths. There is no
 shared mutable fixture state, so tests stay independent and safe to parallelize. And there is no
-setup split across \`beforeAll\` and \`beforeEach\` hooks — the world a test runs in is named,
-whole, at the top of the test.
+setup split across \`beforeAll\` and \`beforeEach\` hooks: the world a test runs in is named, whole,
+at the top of the test.
 
 The production version of this helper is about forty lines. It adds \`.skip\` and \`.only\`, options
 passthrough, and one trick that earns its keep: it can run the same test body once per configured
 database backend, each pass building the chain with a different database provider. A migration test
-that works on every supported backend is a loop over worlds, not a copied file. Scoped fakes — fake
-timers, transactions rolled back after each test — become wrappers, which are covered below.
+that works on every supported backend is a loop over worlds, not a copied file. Scoped fakes (fake
+timers, transactions rolled back after each test) become wrappers, which are covered below.
 
 ## Ambient context: one process, many worlds
 
 Every example so far passes context explicitly: the chain hands \`ctx\` to the test body, and each
 service receives its dependencies as parameters. At module scale that honesty is the point. At
-call-stack scale it is invasive — the one ergonomic thing module singletons had going for them was
+call-stack scale it is invasive: the one ergonomic thing module singletons had going for them was
 that any function, however deep, could import the database. If adopting providers meant threading
 \`ctx\` through every signature between a route handler and the query that needs it, most codebases
 would refuse, and they would be right to.
 
 Node has a primitive for exactly this: \`AsyncLocalStorage\`, a value that follows the _asynchronous
 execution graph_ instead of living in a module global. Enter a scope with a value, and any code
-called from that scope — through however many layers, across \`await\` — can read it. Here is the
+called from that scope (through however many layers, across \`await\`) can read it. Here is the
 entire mechanism, a dozen more lines you own:
 `;
 
@@ -361,7 +361,7 @@ React analogy: \`runWith\` is the provider component, \`currentCtx\` is \`useCon
 async execution graph plays the role of the component tree.
 
 A function deep in the stack can now reach its services without a parameter. The default-parameter
-idiom keeps it honest — ambient by default, but any caller may still inject a context explicitly:
+idiom keeps it honest: ambient by default, but any caller may still inject a context explicitly:
 `;
 
 function greetingReport(userId: string, ctx: AppContext = currentCtx<AppContext>()): string {
@@ -379,8 +379,8 @@ test("ambient by default, explicit when injected", () => {
 md`
 This is how the pattern escapes tests and runs an application. The production system behind this
 post builds its app chain once per process; request middleware then _extends_ the ambient context
-per request — parsing the session cookie into a verified claim, binding a request-scoped logger —
-and runs the handler inside the extended scope. A sketch of the real middleware:
+per request (parsing the session cookie into a verified claim, binding a request-scoped logger) and
+runs the handler inside the extended scope. A sketch of the real middleware:
 `;
 
 ts`
@@ -410,7 +410,7 @@ Request scope shadows app scope the way a nested React provider shadows an outer
 being a parameter that contaminates every signature between the middleware and the permission check:
 in the monorepo this comes from, a couple dozen files call helpers like \`isLoggedIn()\` and
 \`currentUser()\`, and none of the signatures in between mention auth at all. Tests use the same
-seam from the other side — a test that needs an authenticated world adds an auth provider to its
+seam from the other side: a test that needs an authenticated world adds an auth provider to its
 chain, which is the middleware's per-request extension done by ordinary code.
 
 And this settles the fourth failure mode from the top of the post: no seam for two configurations in
@@ -446,7 +446,7 @@ test("two worlds run concurrently without sharing state", async () => {
 md`
 Both calls ask the ambient context the same question at the same time and get different answers,
 because each runs inside its own world. Two tenants in one process, a test with fake timers beside
-one without, a preview environment next to production config — the seam is the scope.
+one without, a preview environment next to production config: the seam is the scope.
 
 ## Where it grows
 
@@ -457,10 +457,10 @@ wanting:
 
 **Async providers.** Real chains open connections, so providers can be async and the chain awaits
 each one. \`runWithProvider(provider, fn)\` fuses building the chain with entering its ambient
-scope, and \`providerCtx<T>()\` is \`currentCtx\` with guardrails — a proxy that panics with the
-name of the missing key instead of handing back \`undefined\`.
+scope, and \`providerCtx<T>()\` is \`currentCtx\` with guardrails, a proxy that panics with the name
+of the missing key instead of handing back \`undefined\`.
 
-**Wrappers.** Some dependencies are not values but scopes — a database transaction, middleware, fake
+**Wrappers.** Some dependencies are not values but scopes: a database transaction, middleware, fake
 timers. A \`Wrapper\` is a provider that controls the execution scope around the rest of the chain:
 `;
 
@@ -493,13 +493,13 @@ function provideConnection() {
 md`
 ## A note on Next.js
 
-On the server side — route handlers, server actions, RSC — this all works today, because that code
+On the server side (route handlers, server actions, RSC), this all works today, because that code
 runs in Node where \`AsyncLocalStorage\` is real. Build the app chain once per process, or per
 request when you want request-scoped values, and run handlers inside it.
 
 In the browser there is no equivalent primitive, so I treat this as a composition pattern first:
 client components already have React context, and the provider pattern covers what module singletons
-cover today — services, clients, config. The
+cover today: services, clients, config. The
 [ts-provide](https://github.com/PhotomancerArt/ts-provide) README is honest about the limits of its
 browser shim.
 
@@ -512,8 +512,8 @@ the app composes services. The ceremony has stayed flat as the app has grown, wh
 I care about most.
 
 If you like the pattern, read the source of
-[ts-provide](https://github.com/PhotomancerArt/ts-provide) — \`src/providers.ts\`,
-\`src/provider-context.ts\`, \`src/wrapper.ts\`, and the \`examples/hextime\` app — and copy the
+[ts-provide](https://github.com/PhotomancerArt/ts-provide) (\`src/providers.ts\`,
+\`src/provider-context.ts\`, \`src/wrapper.ts\`, and the \`examples/hextime\` app) and copy the
 ideas that fit. The pattern is small enough that owning the code is often the better move than
 installing it.
 
@@ -555,5 +555,5 @@ Add overloads as your chains grow, or generate them; the production version supp
 providers, wrappers, and disposal with the same shape.
 
 Dependency injection is a good idea that got buried under frameworks. In TypeScript, the good idea
-is available on its own — a provider is just a function, and each test declares its world.
+is available on its own: a provider is just a function, and each test declares its world.
 `;
