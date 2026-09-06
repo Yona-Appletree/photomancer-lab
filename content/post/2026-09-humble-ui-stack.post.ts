@@ -1,7 +1,7 @@
 import { md, post, ts } from "../../src/ts-post";
 
 post({
-  title: "The Humble UI Stack: Tests for the Logic, Stories for the Screen",
+  title: "A Humble UI Stack: Tests for the Logic, Stories for the Screen",
   date: "2026-09-04",
   description:
     "A frontend stack in which the UI is the humble part: three layers per feature, where the logic gets plain unit tests, the components get stories, and both run on the same fake services.",
