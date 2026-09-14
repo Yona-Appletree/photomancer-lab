@@ -26,7 +26,8 @@ This work will later be included in a programming tool and dance simulator to he
 
 ## The dances
 
-Each dance four ways: pen plot, march, seismograph, figure strip with the figure names.
+Each dance four ways: pen plot, march, seismograph, figure strip with the figure names,
+and the figures listed by phrase beside the pen plot.
 Colours are figure families; the method section at the end explains the views.
 
 ![Figure family colours](/examples/2026-09-13-contra-dance-visual-exploration/img/legend.png)
