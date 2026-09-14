@@ -2,7 +2,7 @@
 author = "Yona Appletree"
 title = "Contra Dance: A Visual Exploration"
 date = "2026-09-13"
-description = "Ten contra dances drawn by putting a pen on each dancer in a minor set. An agent-built exploration, approximate on purpose."
+description = "Ten contra dances drawn by putting a pen on each dancer in a minor set. Made with Claude Fable 5.1 while exploring software to help callers program an evening."
 tags = [
   "contra-dance",
   "visualization",
@@ -15,39 +15,18 @@ tags = [
 Ten contra dances. Each picture is one minor set, four dancers, 64 beats: a pen on every
 dancer, drawing for the length of the dance.
 
-> **Transparency note:** the playground that drew these, and most of the words here, were
-> made by an AI agent (Claude) working at my direction over one evening. The question and
-> the rulings are mine. The figure shapes are hand-written approximations, not a
-> simulation, so details are wrong. See the method section for which.
-
-## Method
-
-The canvas is one minor set with the band at the top. Ones start at the top facing down,
-twos at the bottom facing up. Each dancer is a pen: larks blue, robins pink, ones darker.
-
-The pens are moved by sixteen small functions, one per figure, each drawing a plausible
-path for a role over the figure's beats. A dance is the figures from its card with their
-beat counts. The only check is closure: after 64 beats, is everyone standing where the
-next round starts? Nine of the ten dances close exactly. Another Equal Turn, which starts
-in a wave, does not, because the playground has no wave figures and uses stand-ins.
-
-Other approximations: the hey is a figure-eight track with a shoulder offset, the
-courtesy turn is a quarter arc, and Becket dances recentre the square after the slide, so
-the ink breaks there. The top and bottom of the set do not exist.
-
-Each dance below is shown four ways, coloured by figure family:
-
-![Figure family colours](/examples/2026-09-13-contra-dance-visual-exploration/img/legend.png)
-
-- **Pen plot** (left): the whole dance on the set.
-- **March** (top right): the set moves right as the beats pass. Loops are turns, flat
-  stretches are standing still.
-- **Seismograph** (middle): each dancer's position across the set, then along it, against
-  time.
-- **Figure strip** (bottom): one small plot per figure, cell width equal to its beats,
-  the figure's name underneath.
+> **AI disclosure:** this is a visual exploration of contra dances created using Claude
+> Fable 5.1, at my direction, for the purpose of exploring how to build software that helps
+> callers program dances. The agent wrote the playground that drew every picture here and
+> most of this text. The figure shapes are hand-written approximations, not a simulation,
+> so details are wrong. The method section at the end says how it works and what is off.
 
 ## The dances
+
+Each dance is shown four ways: the pen plot on the left, then the march, the seismograph,
+and the figure strip with the figure names underneath. Colours are figure families:
+
+![Figure family colours](/examples/2026-09-13-contra-dance-visual-exploration/img/legend.png)
 
 ### The Baby Rose (no-chain var), David Kaynor
 
@@ -111,3 +90,32 @@ pauses; the arrow keys step a beat.
 <p style="text-align: right; font-size: 0.9em;">
   <a href="/examples/2026-09-13-contra-dance-visual-exploration/" target="_blank">open the playground in its own page ↗</a>
 </p>
+
+## Method
+
+The canvas is one minor set with the band at the top. Ones start at the top facing down,
+twos at the bottom facing up. Each dancer is a pen: larks blue, robins pink, ones darker.
+
+The pens are moved by sixteen small functions, one per figure, each drawing a plausible
+path for a role over the figure's beats. A dance is the figures from its card with their
+beat counts. The only check is closure: after 64 beats, is everyone standing where the
+next round starts? Nine of the ten dances close exactly. Another Equal Turn, which starts
+in a wave, does not, because the playground has no wave figures and uses stand-ins.
+
+Other approximations: the hey is a figure-eight track with a shoulder offset, the
+courtesy turn is a quarter arc, and Becket dances recentre the square after the slide, so
+the ink breaks there. The top and bottom of the set do not exist.
+
+The four views of each dance:
+
+- **Pen plot**: the whole dance on the set.
+- **March**: the set moves right as the beats pass. Loops are turns, flat stretches are
+  standing still.
+- **Seismograph**: each dancer's position across the set, then along it, against time.
+- **Figure strip**: one small plot per figure, cell width equal to its beats, the figure's
+  name underneath.
+
+The playground is a single HTML file with no dependencies, written by the agent in one
+evening from the question "could a dance be drawn by pens on the four roles, and how would
+a program be laid out". I ruled on the canvas, the pens, the dances, and the layout; the
+agent decided how each figure is drawn.

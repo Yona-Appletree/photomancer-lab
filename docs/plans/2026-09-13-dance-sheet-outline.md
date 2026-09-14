@@ -170,6 +170,12 @@ draft were dropped. Beats 3 to 6 and 8 to 9 of the beat sheet collapse
 into the method section. The card image comes from the spike's
 `?view=card&dance=<i>` capture mode.
 
+**Second pass (2026-09-13):** method section moves to the bottom; the
+page opens with the gallery, one sentence, an explicit AI disclosure in
+Yona's words (made with Claude Fable 5.1, at Yona's direction, to
+explore software that helps callers program dances), then "The dances"
+with a two-line note on the four views and the legend.
+
 ## Open decisions (as put to Yona, resolved above)
 
 1. **Reader.** A (caller) primary with B (engineer) in the methodology
