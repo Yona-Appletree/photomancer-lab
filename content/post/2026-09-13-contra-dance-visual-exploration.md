@@ -12,8 +12,17 @@ tags = [
 
 ![Ten contra dances, each drawn as one picture](/examples/2026-09-13-contra-dance-visual-exploration/img/gallery.png)
 
-Ten contra dances. Each picture is one minor set, four dancers, 64 beats: a pen on every
-dancer, drawing for the length of the dance.
+I've been exploring the idea of visualizing contra dances for the purpose of aiding callers in assembling their programs.
+
+This post is an exploration of the idea and a collection of dances from a recent program I worked on.
+
+The goal is to find a way to help callers, especially newer ones like me, understand the "feeling" of dances visually. 
+
+This work will later be included in a programming tool and dance simulator to help me program dances as well as educate people about what contra dancing is, and how it looks and feels. 
+
+---
+
+**AI Disclaimer:** All code, visuals, and the remainder of this post were created using Claude code and Fable 5.1.
 
 ## The dances
 
@@ -87,11 +96,8 @@ pauses; the arrow keys step a beat.
 
 ## Method
 
-**AI disclosure:** this is a visual exploration of contra dances created using Claude
-Fable 5.1, at my direction, for the purpose of exploring how to build software that helps
-callers program dances. The agent wrote the playground that drew every picture and most of
-this text. The figure shapes are hand-written approximations, not a simulation, so details
-are wrong; the rest of this section says how.
+The figure shapes are hand-written approximations, not a simulation, so details are wrong.
+This section says how.
 
 The canvas is one minor set with the band at the top. Ones start at the top facing down,
 twos at the bottom facing up. Each dancer is a pen: larks blue, robins pink, ones darker.
