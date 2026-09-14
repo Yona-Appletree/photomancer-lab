@@ -43,6 +43,7 @@ canvas{display:block}
 .chips{display:flex;flex-wrap:wrap;gap:3px;margin:6px 0 0;max-width:260px}.chips span{font:10px system-ui,sans-serif;color:#1d1510;padding:1px 5px;border-radius:3px}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}.gallery .g{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;text-align:center}.gallery .g canvas{margin:0 auto;border-radius:4px}.gallery .g b{display:block;font-size:13px;margin-top:6px}.gallery .g span{font-size:11px;color:var(--muted)}
 .shot.gal section:not(#sg){display:none}.shot.gal .gallery{grid-template-columns:repeat(5,1fr);gap:10px;width:1180px}
+.dcard{display:flex;gap:10px;align-items:flex-start;background:var(--bg);padding:8px;width:fit-content}.dcard .dg{text-align:center}.dcard .dg b{display:block;font-size:14px;margin-top:6px}.dcard .dg span{font-size:11px;color:var(--muted)}.dcard .dr{display:flex;flex-direction:column;gap:3px}
 .legend{display:flex;flex-wrap:wrap;gap:4px 10px;font:11px ui-monospace,Menlo,monospace;color:var(--muted);margin:6px 0}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
 .legend span{cursor:pointer;padding:1px 4px;border-radius:3px;border:1px solid transparent}
@@ -275,14 +276,14 @@ function drawMarch(cv,dance,w,h,V,o){o=o||{};const H=h+(o.labels?LH+2:0);const g
   for(let b=4;b<64;b+=4){if(b%16===0)continue;const x=x0+b*V;g.strokeStyle=P.grid;g.beginPath();g.moveTo(x,cy-2);g.lineTo(x,cy+2);g.stroke();}
   drawInk(g,dance,s=>[x0+s.t*V+s.x*S,cy+s.y*S],o);if(o.labels)drawLabels(g,dance,x0,V,h+2,LH);return {x0,V,S};}
 // 0d seismograph
-function drawSeismo(cv,dance,w,h,V,o){o=o||{};const H=h+(o.labels?LH+2:0);const g=setup(cv,w,H);const P=paper();g.fillStyle=P.bg;g.fillRect(0,0,w,H);const x0=8,laneH=h/2,A=laneH/(2*EXT+0.4);
+function drawSeismo(cv,dance,w,h,V,o){o=o||{};const H=h+(o.labels?LH+2:0);const g=setup(cv,w,H);const P=paper();g.fillStyle=P.bg;g.fillRect(0,0,w,H);const x0=o.x0!=null?o.x0:8,laneH=h/2,A=laneH/(2*EXT+0.4);
   [0,1].forEach(l=>{const cy=laneH*l+laneH/2;g.strokeStyle=P.grid;g.lineWidth=1;g.beginPath();g.moveTo(x0,cy);g.lineTo(x0+64*V,cy);g.stroke();if(!o.noLabels){g.fillStyle=P.text;g.font='10px ui-monospace,Menlo,monospace';g.fillText(l?'along':'across',x0+2,laneH*l+10);}});
   for(let b=0;b<=64;b+=16){const x=x0+b*V;g.strokeStyle=P.grid2;g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke();}
   g.strokeStyle=P.grid;g.beginPath();g.moveTo(x0,laneH);g.lineTo(x0+64*V,laneH);g.stroke();
   drawInk(g,dance,s=>[x0+s.t*V,laneH/2-s.x*A],Object.assign({},o,{noHeads:true}));drawInk(g,dance,s=>[x0+s.t*V,laneH*1.5+s.y*A],o);if(o.labels)drawLabels(g,dance,x0,V,h+2,LH);return {x0,V};}
 // 0b figure strip and the vision's bars
 function cellRects(dance,x0,V){return dance.figures.map(f=>({f,x:x0+f.start*V,w:f.beats*V}));}
-function drawStrip(cv,dance,w,h,V,o){o=o||{};const H=h+(o.labels?LH+2:0);const g=setup(cv,w,H);const P=paper();g.fillStyle=P.bg;g.fillRect(0,0,w,H);const x0=8,S=h/3.9;
+function drawStrip(cv,dance,w,h,V,o){o=o||{};const H=h+(o.labels?LH+2:0);const g=setup(cv,w,H);const P=paper();g.fillStyle=P.bg;g.fillRect(0,0,w,H);const x0=o.x0!=null?o.x0:8,S=h/3.9;
   cellRects(dance,x0,V).forEach(({f,x,w:cw})=>{const dim=OPT.fam&&f.family!==OPT.fam;g.fillStyle=rgba(FAMILY_COLOR[f.family]||'#999',OPT.paper?(dim?0.12:0.38):(dim?0.06:0.2));g.fillRect(x,0,cw,h);
     g.strokeStyle=P.grid2;g.lineWidth=1;g.beginPath();g.moveTo(x+0.5,0);g.lineTo(x+0.5,h);g.stroke();
     g.save();g.beginPath();g.rect(x,0,cw,h);g.clip();const cx=x+cw/2,cy=h/2;if(cw>=30){g.strokeStyle=P.grid;g.strokeRect(cx-S,cy-S,2*S,2*S);}
@@ -390,6 +391,13 @@ $('notes').innerHTML=`<b>What to judge.</b> (1) Does the <b>pen plot</b> read as
   if(q.has('only')){const t=document.getElementById(q.get('only'));if(t){if(t.classList.contains('g')){gal.style.display='block';t.style.width='fit-content';}let el=t;while(el&&el!==document.body){Array.from(el.parentElement.children).forEach(c=>{if(c!==el&&c.tagName!=='SCRIPT')c.style.display='none';});el=el.parentElement;el.style.padding='0';el.style.margin='0';el.style.border='none';el.style.maxWidth='none';}document.body.style.padding='0';}}}
 
 renderCard();drawAll();
+if(new URLSearchParams(location.search).get('view')==='card'){const d=DANCES[OPT.dance];const el=document.createElement('div');el.id='dcard';el.className='dcard';
+  el.innerHTML='<div class="dg"><canvas id="dcG"></canvas><b></b><span></span></div><div class="dr"><canvas id="dcM"></canvas><canvas id="dcS"></canvas><canvas id="dcF"></canvas></div>';
+  document.body.prepend(el);Array.from(document.body.children).forEach(c=>{if(c!==el&&c.tagName!=='SCRIPT')c.style.display='none';});document.body.style.padding='0';
+  el.querySelector('b').textContent=d.name;el.querySelector('span').textContent=d.by+' · '+d.form;
+  const V=11,hM=96,hS=120,hF=88;const S=hM/(2*EXT+0.4);const x0=S*1.8+6;const w=Math.ceil(64*V+x0+S*EXT+8);
+  drawMarch($('dcM'),d,w,hM,V,{x0});drawSeismo($('dcS'),d,w,hS,V,{x0,noLabels:true});drawStrip($('dcF'),d,w,hF,V,{x0,labels:true});
+  const H=hM+hS+hF+LH+2+2*3;drawGlyph($('dcG'),d,H,{penW:OPT.penW});}
 </script>
 </body>
 </html>

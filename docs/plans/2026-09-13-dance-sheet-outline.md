@@ -155,6 +155,21 @@ Slug: `2026-09-13-dance-as-one-drawing` (recommended) or
    its figure geometry is approximate. Placed after the gallery image,
    before the nut graf.
 
+## Revision (2026-09-13, after the first draft)
+
+Yona's ruling: readers dislike AI prose, so the post is a gallery, not
+an essay. Structure: gallery image, one sentence, transparency note, a
+short method section (canvas, pens, sixteen figure functions, closure,
+the named approximations, how to read a card), then every dance as one
+card image (glyph beside march, seismograph, and figure strip with
+names), the program rows, and the playground embed. Prose stays under
+about 400 words; per-dance sections are a heading and an image, with a
+sentence only where a picture needs one (Another Equal Turn). The
+per-projection sections and the ring-composition close from the first
+draft were dropped. Beats 3 to 6 and 8 to 9 of the beat sheet collapse
+into the method section. The card image comes from the spike's
+`?view=card&dance=<i>` capture mode.
+
 ## Open decisions (as put to Yona, resolved above)
 
 1. **Reader.** A (caller) primary with B (engineer) in the methodology
