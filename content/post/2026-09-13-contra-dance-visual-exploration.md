@@ -2,7 +2,7 @@
 author = "Yona Appletree"
 title = "Contra Dance: A Visual Exploration"
 date = "2026-09-13"
-description = "Ten contra dances drawn by putting a pen on each dancer in a minor set. Made with Claude Fable 5.1 while exploring software to help callers program an evening."
+description = "Ten contra dances drawn by putting a pen on each dancer in a minor set, and an evening as rows."
 tags = [
   "contra-dance",
   "visualization",
@@ -15,16 +15,10 @@ tags = [
 Ten contra dances. Each picture is one minor set, four dancers, 64 beats: a pen on every
 dancer, drawing for the length of the dance.
 
-> **AI disclosure:** this is a visual exploration of contra dances created using Claude
-> Fable 5.1, at my direction, for the purpose of exploring how to build software that helps
-> callers program dances. The agent wrote the playground that drew every picture here and
-> most of this text. The figure shapes are hand-written approximations, not a simulation,
-> so details are wrong. The method section at the end says how it works and what is off.
-
 ## The dances
 
-Each dance is shown four ways: the pen plot on the left, then the march, the seismograph,
-and the figure strip with the figure names underneath. Colours are figure families:
+Each dance four ways: pen plot, march, seismograph, figure strip with the figure names.
+Colours are figure families; the method section at the end explains the views.
 
 ![Figure family colours](/examples/2026-09-13-contra-dance-visual-exploration/img/legend.png)
 
@@ -92,6 +86,12 @@ pauses; the arrow keys step a beat.
 </p>
 
 ## Method
+
+**AI disclosure:** this is a visual exploration of contra dances created using Claude
+Fable 5.1, at my direction, for the purpose of exploring how to build software that helps
+callers program dances. The agent wrote the playground that drew every picture and most of
+this text. The figure shapes are hand-written approximations, not a simulation, so details
+are wrong; the rest of this section says how.
 
 The canvas is one minor set with the band at the top. Ones start at the top facing down,
 twos at the bottom facing up. Each dancer is a pen: larks blue, robins pink, ones darker.

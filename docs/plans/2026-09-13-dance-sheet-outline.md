@@ -176,6 +176,11 @@ Yona's words (made with Claude Fable 5.1, at Yona's direction, to
 explore software that helps callers program dances), then "The dances"
 with a two-line note on the four views and the legend.
 
+**Third pass (2026-09-13):** the goal is to show callers the patterns
+as fast as possible. No AI mention above the fold; the disclosure (in
+Yona's words, naming Claude Fable 5.1 and the purpose) opens the method
+section at the end. The intro under "The dances" is two lines.
+
 ## Open decisions (as put to Yona, resolved above)
 
 1. **Reader.** A (caller) primary with B (engineer) in the methodology
